@@ -3,12 +3,8 @@ package com.example.maomi.servlet;
 import com.example.maomi.dao.AdoptionDAO;
 import com.example.maomi.model.Adoption;
 import com.example.maomi.model.User;
-
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
+import javax.servlet.http.*;
 import java.io.IOException;
 
 @WebServlet("/submitAdoption")
@@ -22,18 +18,24 @@ public class SubmitAdoptionServlet extends HttpServlet {
             return;
         }
         int catId = Integer.parseInt(request.getParameter("catId"));
+        String catName = request.getParameter("catName");   // 前端必须传入
+        String applicantName = request.getParameter("applicantName");
+        String applicantPhone = request.getParameter("applicantPhone");
+        String applicantAddress = request.getParameter("applicantAddress");
+        String reason = request.getParameter("reason");
+
         Adoption adoption = new Adoption();
         adoption.setUsername(user.getUsername());
-        adoption.setCatId(catId);
-        adoption.setApplicantName(request.getParameter("applicantName"));
-        adoption.setApplicantPhone(request.getParameter("applicantPhone"));
-        adoption.setApplicantAddress(request.getParameter("applicantAddress"));
-        adoption.setReason(request.getParameter("reason"));
+        adoption.setCatName(catName);
+        adoption.setApplicantName(applicantName);
+        adoption.setApplicantPhone(applicantPhone);
+        adoption.setApplicantAddress(applicantAddress);
+        adoption.setReason(reason);
         adoption.setStatus("待审核");
 
         AdoptionDAO dao = new AdoptionDAO();
         boolean ok = dao.insert(adoption);
         response.setContentType("text/plain;charset=UTF-8");
-        response.getWriter().write(ok ? "success" : "插入失败");
+        response.getWriter().write(ok ? "success" : "数据库插入失败");
     }
 }

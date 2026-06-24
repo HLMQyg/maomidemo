@@ -5,7 +5,7 @@ import java.sql.Timestamp;
 public class Adoption {
     private int id;
     private String username;
-    private int catId;
+    private String catName;          // 改为 catName
     private String applicantName;
     private String applicantPhone;
     private String applicantAddress;
@@ -14,14 +14,15 @@ public class Adoption {
     private String reviewNotes;
     private Timestamp applyDate;
     private Timestamp reviewDate;
+    private Timestamp cancelTime;
 
-    // Getter/Setter 略（请自行生成完整）
+    // Getter & Setter ...
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
-    public int getCatId() { return catId; }
-    public void setCatId(int catId) { this.catId = catId; }
+    public String getCatName() { return catName; }
+    public void setCatName(String catName) { this.catName = catName; }
     public String getApplicantName() { return applicantName; }
     public void setApplicantName(String applicantName) { this.applicantName = applicantName; }
     public String getApplicantPhone() { return applicantPhone; }
@@ -38,4 +39,6 @@ public class Adoption {
     public void setApplyDate(Timestamp applyDate) { this.applyDate = applyDate; }
     public Timestamp getReviewDate() { return reviewDate; }
     public void setReviewDate(Timestamp reviewDate) { this.reviewDate = reviewDate; }
+    public Timestamp getCancelTime() { return cancelTime; }
+    public void setCancelTime(Timestamp cancelTime) { this.cancelTime = cancelTime; }
 }

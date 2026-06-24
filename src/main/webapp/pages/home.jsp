@@ -423,7 +423,7 @@
   <div class="nav-logo">🐾 校园流浪猫</div>
   <div class="nav-links">
     <a href="user_center.jsp">👤 个人中心</a>
-    <a href="my_adoptions.jsp">📋 我的领养</a>
+    <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
     <a href="forum.jsp">💬 论坛</a>
     <a href="knowledge.jsp">📖 知识科普</a>
     <a href="feeding.jsp">🍼 在线喂养</a>
@@ -663,6 +663,7 @@
       method: 'POST',
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: 'catId=' + currentCatId +
+              '&catName=' + encodeURIComponent(document.getElementById('modalName').innerText) +
               '&applicantName=' + encodeURIComponent(name) +
               '&applicantPhone=' + encodeURIComponent(phone) +
               '&applicantAddress=' + encodeURIComponent(address) +
