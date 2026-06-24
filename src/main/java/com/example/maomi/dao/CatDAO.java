@@ -6,6 +6,7 @@ import com.example.maomi.utils.DBUtil;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class CatDAO {
 
@@ -19,8 +20,7 @@ public class CatDAO {
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                Cat cat = mapRowToCat(rs);
-                cats.add(cat);
+                cats.add(mapRowToCat(rs));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -119,6 +119,34 @@ public class CatDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    /**
+     * 根据ID集合批量获取猫咪（用于收藏列表等）
+     */
+    public List<Cat> getCatsByIds(Set<Integer> ids) {
+        List<Cat> list = new ArrayList<>();
+        if (ids == null || ids.isEmpty()) return list;
+        StringBuilder sql = new StringBuilder("SELECT * FROM cats WHERE id IN (");
+        for (int i = 0; i < ids.size(); i++) {
+            sql.append("?,");
+        }
+        sql.deleteCharAt(sql.length() - 1);
+        sql.append(")");
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            int index = 1;
+            for (Integer id : ids) {
+                stmt.setInt(index++, id);
+            }
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                list.add(mapRowToCat(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 
     /**
