@@ -17,19 +17,24 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 暖黄背景图 + 柔和渐变，使用 soft-light 融合，消除粉感 */
-            background:
-                    url('images/login-bg.jpg') no-repeat center center / cover,
-                    linear-gradient(135deg, #fff5e6 0%, #f5d6a8 100%);
-            background-blend-mode: soft-light;
+            /* 保持原图清晰，但会通过遮罩弱化 */
+            background: url('images/login-bg.jpg') no-repeat center center / cover;
             font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
             position: relative;
             overflow: hidden;
         }
 
-        /* 移除之前 body::before 的图片层，因为已通过 body 背景实现 */
+        /* 添加一层白色半透明纱，降低图片杂乱感 */
         body::before {
-            display: none;
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.45); /* 薄薄的白色，数值越小背景越清晰 */
+            z-index: 0;
+            pointer-events: none;
         }
 
         @keyframes gradientShift {
@@ -80,14 +85,12 @@
             position: relative;
             z-index: 1;
             width: 450px;
-            background: rgba(255, 250, 240, 0.8); /* 米黄半透明底 */
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            background: rgba(255, 255, 255, 0.65); /* 原本是 0.8，现在更透亮 */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 32px;
-            box-shadow:
-                    0 25px 60px rgba(160, 110, 50, 0.18),
-                    0 0 0 1px rgba(255,255,255,0.7),
-                    inset 0 1px 0 rgba(255,255,255,0.9);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06),   /* 阴影调轻，更干净 */
+            0 0 0 1px rgba(255, 255, 255, 0.8);
             padding: 45px 40px;
             animation: cardFadeIn 0.9s ease-out;
         }
