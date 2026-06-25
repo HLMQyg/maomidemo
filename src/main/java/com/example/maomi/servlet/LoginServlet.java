@@ -35,7 +35,7 @@ public class LoginServlet extends HttpServlet {
                 HttpSession session = request.getSession();
                 session.setAttribute("adminName", username);
                 session.setAttribute("role", "admin");
-                response.sendRedirect("admin/dashboard.jsp");
+                response.sendRedirect(request.getContextPath() + "/admin/dashboard.jsp");
             } else {
                 request.setAttribute("msg", "管理员账号或密码错误");
                 request.getRequestDispatcher("index.jsp").forward(request, response);
