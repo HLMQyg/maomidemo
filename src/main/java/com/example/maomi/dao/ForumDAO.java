@@ -5,13 +5,14 @@ import com.example.maomi.utils.DBUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ForumDAO {
 
     // ==================== 帖子 ====================
 
-    /** 发帖 */
     public int createThread(ForumThread t) {
         String sql = "INSERT INTO forum_thread (title, content, user_id, cat_id, image_path, category) VALUES (?,?,?,?,?,?)";
         try (Connection conn = DBUtil.getConnection();
@@ -30,17 +31,32 @@ public class ForumDAO {
         return -1;
     }
 
-    /** 帖子列表（置顶优先，按时间倒序） */
-    public List<ForumThread> getThreads(String category, String sort, String userId) {
+    /** 帖子列表（支持分类/排序/用户/猫咪/关键词筛选） */
+    public List<ForumThread> getThreads(String category, String sort, String userId,
+                                         Integer catId, String keyword) {
         List<ForumThread> list = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
             "SELECT t.*, c.name AS cat_name FROM forum_thread t " +
             "LEFT JOIN cats c ON t.cat_id = c.id WHERE t.is_hidden = 0 ");
+        List<Object> params = new ArrayList<>();
+
         if (category != null && !category.isEmpty()) {
             sql.append("AND t.category = ? ");
+            params.add(category);
         }
         if (userId != null && !userId.isEmpty()) {
             sql.append("AND t.user_id = ? ");
+            params.add(userId);
+        }
+        if (catId != null) {
+            sql.append("AND t.cat_id = ? ");
+            params.add(catId);
+        }
+        if (keyword != null && !keyword.isEmpty()) {
+            sql.append("AND (t.title LIKE ? OR t.content LIKE ?) ");
+            String kw = "%" + keyword + "%";
+            params.add(kw);
+            params.add(kw);
         }
         if ("hot".equals(sort)) {
             sql.append("ORDER BY t.is_pinned DESC, t.like_count DESC, t.created_at DESC");
@@ -49,9 +65,7 @@ public class ForumDAO {
         }
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-            int i = 1;
-            if (category != null && !category.isEmpty()) stmt.setString(i++, category);
-            if (userId != null && !userId.isEmpty()) stmt.setString(i++, userId);
+            for (int i = 0; i < params.size(); i++) stmt.setObject(i + 1, params.get(i));
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) list.add(mapThread(rs));
         } catch (SQLException e) { e.printStackTrace(); }
@@ -70,7 +84,6 @@ public class ForumDAO {
         return null;
     }
 
-    /** 增加浏览量 */
     public void incrementViewCount(int id) {
         String sql = "UPDATE forum_thread SET view_count = view_count + 1 WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
@@ -80,9 +93,8 @@ public class ForumDAO {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    // ==================== 管理员操作 ====================
+    // ==================== 管理员 ====================
 
-    /** 管理员查全部（含隐藏） */
     public List<ForumThread> getAllThreadsForAdmin() {
         List<ForumThread> list = new ArrayList<>();
         String sql = "SELECT t.*, c.name AS cat_name FROM forum_thread t LEFT JOIN cats c ON t.cat_id = c.id ORDER BY t.is_pinned DESC, t.created_at DESC";
@@ -94,7 +106,6 @@ public class ForumDAO {
         return list;
     }
 
-    /** 置顶/取消 */
     public void togglePin(int id, int pinned) {
         String sql = "UPDATE forum_thread SET is_pinned = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
@@ -105,7 +116,6 @@ public class ForumDAO {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    /** 隐藏/显示 */
     public void toggleHide(int id, int hidden) {
         String sql = "UPDATE forum_thread SET is_hidden = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();
@@ -116,13 +126,13 @@ public class ForumDAO {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    /** 删除帖子 */
     public boolean deleteThread(int id) {
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 String[] sqls = {
                     "DELETE FROM forum_report WHERE thread_id = ?",
+                    "DELETE FROM forum_comment_like WHERE comment_id IN (SELECT id FROM forum_comment WHERE thread_id = ?)",
                     "DELETE FROM forum_like WHERE thread_id = ?",
                     "DELETE FROM forum_comment WHERE thread_id = ?",
                     "DELETE FROM forum_thread WHERE id = ?"
@@ -147,25 +157,34 @@ public class ForumDAO {
 
     // ==================== 评论 ====================
 
-    /** 添加评论 */
-    public boolean addComment(ForumComment c) {
-        String sql = "INSERT INTO forum_comment (thread_id, user_id, content) VALUES (?,?,?)";
+    /** 添加评论（支持回复） */
+    public boolean addComment(int threadId, String userId, String content, Integer parentId) {
+        String sql = parentId != null
+            ? "INSERT INTO forum_comment (thread_id, user_id, content, parent_id) VALUES (?,?,?,?)"
+            : "INSERT INTO forum_comment (thread_id, user_id, content) VALUES (?,?,?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, c.getThreadId());
-            stmt.setString(2, c.getUserId());
-            stmt.setString(3, c.getContent());
+            stmt.setInt(1, threadId);
+            stmt.setString(2, userId);
+            stmt.setString(3, content);
+            if (parentId != null) stmt.setInt(4, parentId);
             boolean ok = stmt.executeUpdate() > 0;
-            if (ok) updateCommentCount(c.getThreadId());
+            if (ok) updateCommentCount(threadId);
             return ok;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
     }
 
-    /** 获取帖子评论 */
-    public List<ForumComment> getComments(int threadId) {
-        List<ForumComment> list = new ArrayList<>();
-        String sql = "SELECT * FROM forum_comment WHERE thread_id = ? ORDER BY created_at ASC";
+    /** 获取帖子评论（带嵌套回复和点赞数） */
+    public List<ForumComment> getCommentsWithReplies(int threadId, String sort) {
+        List<ForumComment> all = new ArrayList<>();
+        String order = "hot".equals(sort) ? "like_count DESC, created_at ASC" : "created_at ASC";
+        String sql = "SELECT c.*, COALESCE(l.like_cnt, 0) AS like_count " +
+                     "FROM forum_comment c " +
+                     "LEFT JOIN (SELECT comment_id, COUNT(*) AS like_cnt FROM forum_comment_like GROUP BY comment_id) l " +
+                     "ON c.id = l.comment_id " +
+                     "WHERE c.thread_id = ? " +
+                     "ORDER BY c.parent_id IS NULL DESC, " + order;
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, threadId);
@@ -177,10 +196,36 @@ public class ForumDAO {
                 c.setUserId(rs.getString("user_id"));
                 c.setContent(rs.getString("content"));
                 c.setCreatedAt(rs.getTimestamp("created_at"));
-                list.add(c);
+                int pid = rs.getInt("parent_id");
+                c.setParentId(rs.wasNull() ? null : pid);
+                c.setLikeCount(rs.getInt("like_count"));
+                all.add(c);
             }
         } catch (SQLException e) { e.printStackTrace(); }
-        return list;
+        return buildCommentTree(all);
+    }
+
+    /** 获取帖子评论（兼容旧接口） */
+    public List<ForumComment> getComments(int threadId) {
+        return getCommentsWithReplies(threadId, "latest");
+    }
+
+    /** 将扁平评论列表构建为树形 */
+    private List<ForumComment> buildCommentTree(List<ForumComment> all) {
+        Map<Integer, ForumComment> map = new HashMap<>();
+        List<ForumComment> roots = new ArrayList<>();
+        for (ForumComment c : all) {
+            map.put(c.getId(), c);
+            c.setReplies(new ArrayList<>());
+        }
+        for (ForumComment c : all) {
+            if (c.getParentId() != null && map.containsKey(c.getParentId())) {
+                map.get(c.getParentId()).getReplies().add(c);
+            } else {
+                roots.add(c);
+            }
+        }
+        return roots;
     }
 
     private void updateCommentCount(int threadId) {
@@ -193,35 +238,70 @@ public class ForumDAO {
         } catch (SQLException e) { e.printStackTrace(); }
     }
 
-    // ==================== 点赞 ====================
+    // ==================== 评论点赞 ====================
 
-    /** 切换点赞（有则取消，无则添加），返回操作后的点赞数 */
+    public int toggleCommentLike(int commentId, String userId) {
+        try (Connection conn = DBUtil.getConnection()) {
+            String checkSql = "SELECT id FROM forum_comment_like WHERE comment_id = ? AND user_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(checkSql)) {
+                stmt.setInt(1, commentId);
+                stmt.setString(2, userId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    try (PreparedStatement ds = conn.prepareStatement("DELETE FROM forum_comment_like WHERE id = ?")) {
+                        ds.setInt(1, rs.getInt("id"));
+                        ds.executeUpdate();
+                    }
+                } else {
+                    try (PreparedStatement is = conn.prepareStatement("INSERT INTO forum_comment_like (comment_id, user_id) VALUES (?,?)")) {
+                        is.setInt(1, commentId);
+                        is.setString(2, userId);
+                        is.executeUpdate();
+                    }
+                }
+            }
+            try (PreparedStatement stmt = conn.prepareStatement("SELECT COUNT(*) FROM forum_comment_like WHERE comment_id = ?")) {
+                stmt.setInt(1, commentId);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
+
+    public boolean isCommentLiked(int commentId, String userId) {
+        String sql = "SELECT 1 FROM forum_comment_like WHERE comment_id = ? AND user_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, commentId);
+            stmt.setString(2, userId);
+            return stmt.executeQuery().next();
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }
+
+    // ==================== 点赞（帖子） ====================
+
     public int toggleLike(int threadId, String userId) {
         try (Connection conn = DBUtil.getConnection()) {
-            // 先查是否已点赞
             String checkSql = "SELECT id FROM forum_like WHERE thread_id = ? AND user_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkSql)) {
                 stmt.setInt(1, threadId);
                 stmt.setString(2, userId);
                 ResultSet rs = stmt.executeQuery();
                 if (rs.next()) {
-                    // 已点赞，取消
-                    String delSql = "DELETE FROM forum_like WHERE id = ?";
-                    try (PreparedStatement ds = conn.prepareStatement(delSql)) {
+                    try (PreparedStatement ds = conn.prepareStatement("DELETE FROM forum_like WHERE id = ?")) {
                         ds.setInt(1, rs.getInt("id"));
                         ds.executeUpdate();
                     }
                 } else {
-                    // 未点赞，添加
-                    String insSql = "INSERT INTO forum_like (thread_id, user_id) VALUES (?,?)";
-                    try (PreparedStatement is = conn.prepareStatement(insSql)) {
+                    try (PreparedStatement is = conn.prepareStatement("INSERT INTO forum_like (thread_id, user_id) VALUES (?,?)")) {
                         is.setInt(1, threadId);
                         is.setString(2, userId);
                         is.executeUpdate();
                     }
                 }
             }
-            // 更新点赞数并返回
             String updSql = "UPDATE forum_thread SET like_count = (SELECT COUNT(*) FROM forum_like WHERE thread_id = ?) WHERE id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(updSql)) {
                 stmt.setInt(1, threadId);
@@ -238,7 +318,6 @@ public class ForumDAO {
         return 0;
     }
 
-    /** 查询用户是否已点赞 */
     public boolean isLiked(int threadId, String userId) {
         String sql = "SELECT 1 FROM forum_like WHERE thread_id = ? AND user_id = ?";
         try (Connection conn = DBUtil.getConnection();
@@ -252,7 +331,6 @@ public class ForumDAO {
 
     // ==================== 举报 ====================
 
-    /** 举报帖子 */
     public boolean addReport(ForumReport r) {
         String sql = "INSERT INTO forum_report (thread_id, user_id, reason) VALUES (?,?,?)";
         try (Connection conn = DBUtil.getConnection();
@@ -265,7 +343,6 @@ public class ForumDAO {
         return false;
     }
 
-    /** 管理员查所有举报 */
     public List<ForumReport> getAllReports() {
         List<ForumReport> list = new ArrayList<>();
         String sql = "SELECT r.*, t.title AS thread_title FROM forum_report r JOIN forum_thread t ON r.thread_id = t.id ORDER BY r.created_at DESC";
@@ -288,7 +365,6 @@ public class ForumDAO {
         return list;
     }
 
-    /** 处理举报 */
     public boolean handleReport(int id, String status, String notes) {
         String sql = "UPDATE forum_report SET status = ?, admin_notes = ? WHERE id = ?";
         try (Connection conn = DBUtil.getConnection();

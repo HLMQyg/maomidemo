@@ -54,7 +54,7 @@ public class ForumPostServlet extends HttpServlet {
         ForumDAO dao = new ForumDAO();
         int id = dao.createThread(t);
         if (id > 0) {
-            response.sendRedirect(request.getContextPath() + "/forumDetail?id=" + id);
+            response.sendRedirect(request.getContextPath() + "/forumList");
         } else {
             request.setAttribute("msg", "发帖失败");
             request.getRequestDispatcher("/pages/forum_post.jsp").forward(request, response);

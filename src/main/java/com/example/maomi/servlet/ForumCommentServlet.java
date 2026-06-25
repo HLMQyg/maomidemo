@@ -1,7 +1,6 @@
 package com.example.maomi.servlet;
 
 import com.example.maomi.dao.ForumDAO;
-import com.example.maomi.model.ForumComment;
 import com.example.maomi.model.User;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
@@ -20,15 +19,21 @@ public class ForumCommentServlet extends HttpServlet {
         User user = (User) session.getAttribute("user");
         int threadId = Integer.parseInt(request.getParameter("threadId"));
         String content = request.getParameter("content");
+        String parentIdStr = request.getParameter("parentId");
+        Integer parentId = null;
+        if (parentIdStr != null && !parentIdStr.isEmpty()) {
+            try { parentId = Integer.parseInt(parentIdStr); } catch (NumberFormatException ignored) {}
+        }
+
         if (content == null || content.trim().isEmpty()) {
+            response.setContentType("text/plain;charset=UTF-8");
             response.getWriter().write("内容不能为空");
             return;
         }
-        ForumComment c = new ForumComment();
-        c.setThreadId(threadId);
-        c.setUserId(user.getUsername());
-        c.setContent(content.trim());
+
         ForumDAO dao = new ForumDAO();
-        response.getWriter().write(dao.addComment(c) ? "ok" : "评论失败");
+        boolean ok = dao.addComment(threadId, user.getUsername(), content.trim(), parentId);
+        response.setContentType("text/plain;charset=UTF-8");
+        response.getWriter().write(ok ? "ok" : "评论失败");
     }
 }

@@ -1,6 +1,7 @@
 package com.example.maomi.model;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 public class ForumComment {
     private int id;
@@ -8,6 +9,9 @@ public class ForumComment {
     private String userId;
     private String content;
     private Timestamp createdAt;
+    private Integer parentId;
+    private int likeCount;
+    private List<ForumComment> replies;
 
     public ForumComment() {}
 
@@ -21,4 +25,10 @@ public class ForumComment {
     public void setContent(String content) { this.content = content; }
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public Integer getParentId() { return parentId; }
+    public void setParentId(Integer parentId) { this.parentId = parentId; }
+    public int getLikeCount() { return likeCount; }
+    public void setLikeCount(int likeCount) { this.likeCount = likeCount; }
+    public List<ForumComment> getReplies() { return replies; }
+    public void setReplies(List<ForumComment> replies) { this.replies = replies; }
 }
