@@ -110,11 +110,14 @@
 <nav class="navbar">
     <div class="nav-logo">🐾 校园流浪猫</div>
     <div class="nav-links">
-        <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
-        <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
-        <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
-        <a href="<%= request.getContextPath() %>/pages/knowledge.jsp">📖 知识科普</a>
-        <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
+        <div class="nav-links">
+            <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
+            <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
+            <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
+            <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
+            <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
+            <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
+        </div>
     </div>
     <div class="user-badge">
         🐱 <%= sessionUser.getUsername() %>
