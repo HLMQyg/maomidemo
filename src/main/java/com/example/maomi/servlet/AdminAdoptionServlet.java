@@ -3,7 +3,6 @@ package com.example.maomi.servlet;
 import com.example.maomi.dao.AdminDAO;
 import com.example.maomi.dao.AdoptionDAO;
 import com.example.maomi.model.Adoption;
-import com.example.maomi.model.AdoptionMessage;
 import com.example.maomi.utils.JsonUtil;
 
 import javax.servlet.annotation.WebServlet;
@@ -60,16 +59,6 @@ public class AdminAdoptionServlet extends HttpServlet {
                 }
             }
             response.getWriter().write(ok ? "ok" : "操作失败");
-        } else if ("message".equals(action)) {
-            int adoptionId = Integer.parseInt(request.getParameter("adoptionId"));
-            String message = request.getParameter("message");
-            String adminName = (String) session.getAttribute("adminName");
-            AdoptionMessage msg = new AdoptionMessage();
-            msg.setAdoptionId(adoptionId);
-            msg.setSender("管理员-" + adminName);
-            msg.setMessage(message);
-            boolean ok = adoptionDAO.addMessage(msg);
-            response.getWriter().write(ok ? "ok" : "发送失败");
         }
     }
 }

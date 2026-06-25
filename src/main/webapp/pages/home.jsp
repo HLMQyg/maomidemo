@@ -220,7 +220,7 @@
   <div class="nav-links">
     <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
     <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
-    <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
+    <a href="<%= request.getContextPath() %>/forumList">💬 论坛</a>
     <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
     <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
     <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
