@@ -133,12 +133,6 @@
         .modal-cat-image { width: 100%; height: 250px; object-fit: cover; border-radius: 16px; margin-bottom: 15px; }
         .modal-field { margin-bottom: 10px; font-size: 14px; color: #6f4518; }
         .modal-field strong { color: #b87c2c; }
-        .modal-comments {
-            max-height: 200px; overflow-y: auto; margin: 15px 0;
-            border-top: 1px solid #f0d9b5; border-bottom: 1px solid #f0d9b5; padding: 10px 0;
-        }
-        .comment-item { padding: 4px 0; color: #6f4518; border-bottom: 1px dashed #f0d9b5; }
-        .comment-item strong { color: #e6a14c; }
         .adopt-btn, .disabled-btn {
             width: 100%; padding: 12px; border-radius: 12px; border: none; font-weight: 700; margin-top: 10px; cursor: pointer;
         }
@@ -278,7 +272,7 @@
     </div>
 </div>
 
-<!-- 猫咪详情模态框 -->
+<!-- 猫咪详情模态框（已移除留言区域） -->
 <div id="catModal" class="modal-overlay">
     <div class="modal-content">
         <span class="modal-close" onclick="closeModal()">&times;</span>
@@ -291,9 +285,6 @@
         <div class="modal-field"><strong>描述：</strong><span id="modalDesc"></span></div>
         <div class="modal-field"><strong>发现地点：</strong><span id="modalLocation"></span></div>
         <div class="modal-field"><strong>发现日期：</strong><span id="modalDate"></span></div>
-
-        <h4 style="margin-top:15px;">💬 大家对它的留言</h4>
-        <div class="modal-comments" id="modalCommentsList">加载中...</div>
 
         <div id="modalBtnArea"></div>
 
@@ -332,8 +323,6 @@
                 document.getElementById('modalDate').innerText = cat.foundDate;
                 currentCatState = cat.state;
 
-                loadModalComments(catId);
-
                 var btnArea = document.getElementById('modalBtnArea');
                 if (cat.state === '已领养') {
                     btnArea.innerHTML = '<button class="disabled-btn" disabled>🏠 已被领养</button>';
@@ -343,19 +332,6 @@
                     document.getElementById('adoptFormArea').style.display = 'none';
                 }
                 document.getElementById('catModal').style.display = 'flex';
-            });
-    }
-
-    function loadModalComments(catId) {
-        fetch('<%= request.getContextPath() %>/getComments?catId=' + catId)
-            .then(res => res.json())
-            .then(data => {
-                var container = document.getElementById('modalCommentsList');
-                if (data.length === 0) {
-                    container.innerHTML = '<div style="color:#aaa;">暂无留言</div>';
-                } else {
-                    container.innerHTML = data.map(c => '<div class="comment-item"><strong>' + c.username + '：</strong>' + c.comment + '</div>').join('');
-                }
             });
     }
 
