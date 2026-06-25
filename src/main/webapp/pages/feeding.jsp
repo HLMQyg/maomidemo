@@ -1,6 +1,6 @@
 <%@ page import="com.example.maomi.model.User" %>
 <%@ page import="com.example.maomi.dao.CatDAO" %>
-<%@ page import="com.example.maomi.dao.FeedingRecordDAO" %>   <!-- ✅ 新增 -->
+<%@ page import="com.example.maomi.dao.FeedingRecordDAO" %>
 <%@ page import="com.example.maomi.model.Cat" %>
 <%@ page import="java.util.List" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
@@ -11,7 +11,7 @@
         return;
     }
     CatDAO catDAO = new CatDAO();
-    FeedingRecordDAO frDAO = new FeedingRecordDAO();   // ✅ 新增
+    FeedingRecordDAO frDAO = new FeedingRecordDAO();
     List<Cat> cats = catDAO.getAllCats();
 %>
 <!DOCTYPE html>
@@ -20,7 +20,6 @@
     <meta charset="UTF-8">
     <title>在线喂养 - 校园流浪猫管理</title>
     <style>
-        /* 以下样式完全保留，仅修改了 cat-card 相关尺寸让卡片更短 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: #fffaf3;
@@ -73,12 +72,12 @@
             box-shadow: 2px 0 10px rgba(0,0,0,0.05);
             display: flex; flex-direction: column; overflow-y: auto;
         }
-        .sidebar-header { text-align: center; margin-bottom: 20px; }
+        .sidebar-header { text-align: center; margin-bottom: 20px; cursor: pointer; }
         .sidebar-avatar {
             width: 70px; height: 70px; border-radius: 50%; object-fit: cover;
             border: 3px solid #f0d9b5; margin-bottom: 8px;
         }
-        .sidebar-username { font-weight: 700; color: #6f4518; font-size: 16px; }
+        .sidebar-username { font-weight: 700; color: #6f4518; font-size: 16px; position: relative; display: inline-block; }
         .sidebar h3 {
             color: #b87c2c; margin: 15px 0 10px; font-size: 18px;
             border-bottom: 1px solid #f0d9b5; padding-bottom: 8px;
@@ -98,12 +97,10 @@
 
         .right-content { flex: 1; display: flex; flex-direction: column; padding: 25px; overflow-y: auto; }
         .right-content h2 { color: #6f4518; margin-bottom: 20px; }
-        /* ✅ 修改了网格列宽和间距，让卡片更紧凑 */
         .cat-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 15px; flex: 1;
         }
-        /* ✅ 修改了卡片内边距、圆角、阴影，图片大小 */
         .cat-card {
             background: white; border-radius: 16px; padding: 12px; text-align: center;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05); transition: 0.3s;
@@ -153,6 +150,34 @@
             width: 100%; padding: 10px; border: 1px solid #f0d9b5;
             border-radius: 10px; margin-bottom: 12px;
         }
+        /* 消息模态框样式 */
+        .msg-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; justify-content: center;
+            align-items: center; z-index: 300;
+        }
+        .msg-modal {
+            background: white; border-radius: 18px; padding: 25px;
+            width: 400px; max-height: 400px; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .msg-modal h3 { color: #6f4518; margin-bottom: 15px; }
+        .msg-item {
+            border-bottom: 1px solid #f0d9b5; padding: 8px 0;
+        }
+        .msg-item .msg-content { font-size: 14px; color: #6f4518; }
+        .msg-item .msg-time { font-size: 12px; color: #aaa; }
+        /* 红点样式 */
+        .msg-badge {
+            display: none;
+            background: red;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -174,12 +199,15 @@
 
 <div class="main-container">
     <div class="sidebar" id="inventoryPanel">
-        <div class="sidebar-header">
+        <div class="sidebar-header" onclick="showFeedingMessages()" style="cursor:pointer;">
             <img class="sidebar-avatar"
                  src="<%= request.getContextPath() %>/avatar?name=<%= sessionUser.getProfileImage() != null ? sessionUser.getProfileImage() : "default.png" %>"
                  alt="头像"
                  onerror="this.src='images/default_avatar.png'">
-            <div class="sidebar-username"><%= sessionUser.getUsername() %></div>
+            <div class="sidebar-username">
+                <%= sessionUser.getUsername() %>
+                <span id="msgBadge" class="msg-badge">0</span>
+            </div>
         </div>
         <h3>🎒 我的储物柜</h3>
         <div id="inventoryList"></div>
@@ -189,10 +217,8 @@
         <h2>🐱 等待投喂的小可爱</h2>
         <div class="cat-grid">
             <% for (Cat cat : cats) {
-                // ✅ 新增：跳过已领养的猫咪
                 if ("已领养".equals(cat.getState())) continue;
 
-                // ✅ 新增：获取喂养人
                 String feeder = null;
                 if ("喂养中".equals(cat.getState())) {
                     feeder = frDAO.getLastFeedingUserByCatId(cat.getId());
@@ -210,7 +236,6 @@
                       id="catState-<%= cat.getId() %>">
                         <%= cat.getState() %>
                     </span>
-                <%-- ✅ 新增：显示喂养人 --%>
                 <% if (feeder != null) { %>
                 <p style="font-size:11px; color:#856404; margin-top:3px;">🤱 喂养人：<%= feeder %></p>
                 <% } %>
@@ -232,6 +257,15 @@
             <button class="feed-btn" onclick="submitFeed()" style="width: 48%;">确认喂养</button>
             <button class="feed-btn" onclick="closeFeedDialog()" style="width: 48%; background: #aaa;">取消</button>
         </div>
+    </div>
+</div>
+
+<!-- 查看管理员回复的消息模态框 -->
+<div class="msg-modal-overlay" id="messagesModal">
+    <div class="msg-modal">
+        <span style="float:right; cursor:pointer; font-size: 20px;" onclick="closeMessages()">&times;</span>
+        <h3>💬 管理员回复</h3>
+        <div id="messagesList"></div>
     </div>
 </div>
 
@@ -262,16 +296,32 @@
         e.dataTransfer.setData('text/plain', draggedItemId);
     }
     function allowDrop(e) { e.preventDefault(); }
+
     function dropFeed(e) {
         e.preventDefault();
         var catCard = e.target.closest('.cat-card');
         if (!catCard) return;
         var catId = catCard.dataset.catid;
         if (!draggedItemId) return;
+        var stateElem = document.getElementById('catState-' + catId);
+        if (!stateElem) return;
+        var state = stateElem.innerText.trim();
+        if (state === '喂养中' || state === '已喂养') {
+            alert('猫咪已经在喂养啦');
+            return;
+        }
         performFeed(catId, draggedItemId, 1);
     }
 
     function performFeed(catId, itemId, qty) {
+        var stateElem = document.getElementById('catState-' + catId);
+        if (stateElem) {
+            var state = stateElem.innerText.trim();
+            if (state === '喂养中' || state === '已喂养') {
+                alert('猫咪已经在喂养啦');
+                return;
+            }
+        }
         fetch('<%= request.getContextPath() %>/feedCat', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -279,12 +329,7 @@
         }).then(res => res.text()).then(msg => {
             if (msg === 'ok') {
                 alert('喂养成功！');
-                loadInventory();
-                var stateElem = document.getElementById('catState-' + catId);
-                if (stateElem) {
-                    stateElem.innerText = '喂养中';
-                    stateElem.className = 'status status-feeding';
-                }
+                location.reload();
             } else {
                 alert(msg);
             }
@@ -294,6 +339,14 @@
     var currentFeedCatId = null;
     function openFeedDialog(catId) {
         currentFeedCatId = catId;
+        var stateElem = document.getElementById('catState-' + catId);
+        if (stateElem) {
+            var state = stateElem.innerText.trim();
+            if (state === '喂养中' || state === '已喂养') {
+                alert('猫咪已经在喂养啦');
+                return;
+            }
+        }
         fetch('<%= request.getContextPath() %>/getInventory')
             .then(res => res.json())
             .then(data => {
@@ -305,9 +358,7 @@
                 document.getElementById('feedDialog').style.display = 'flex';
             });
     }
-    function closeFeedDialog() {
-        document.getElementById('feedDialog').style.display = 'none';
-    }
+    function closeFeedDialog() { document.getElementById('feedDialog').style.display = 'none'; }
     function submitFeed() {
         var itemId = document.getElementById('feedItemSelect').value;
         var qty = document.getElementById('feedQty').value;
@@ -319,12 +370,72 @@
         closeFeedDialog();
     }
 
+    // 检查未读消息并显示红点
+    function checkUnreadMessages() {
+        fetch('<%= request.getContextPath() %>/getFeedingMessages?action=unreadCount')
+            .then(res => res.json())
+            .then(data => {
+                var badge = document.getElementById('msgBadge');
+                if (data.count > 0) {
+                    badge.style.display = 'inline-block';
+                    badge.innerText = data.count;
+                } else {
+                    badge.style.display = 'none';
+                }
+            });
+    }
+
+    // 查看管理员回复消息（同时标记已读）
+    function showFeedingMessages() {
+        // 标记已读
+        fetch('<%= request.getContextPath() %>/getFeedingMessages', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'action=markRead'
+        }).then(() => {
+            var badge = document.getElementById('msgBadge');
+            badge.style.display = 'none';
+        });
+
+        // 加载消息列表
+        fetch('<%= request.getContextPath() %>/getFeedingMessages')
+            .then(res => res.json())
+            .then(data => {
+                var container = document.getElementById('messagesList');
+                if (data.length === 0) {
+                    container.innerHTML = '<div style="color:#aaa;">暂无消息</div>';
+                } else {
+                    var html = '';
+                    data.forEach(function(m) {
+                        var imgTag = '';
+                        if (m.imagePath) {
+                            imgTag = '<div><img src="<%= request.getContextPath() %>/' + m.imagePath + '" style="max-width:100%; margin-top:5px; border-radius:8px;"></div>';
+                        }
+                        html += '<div class="msg-item">' +
+                            '<div style="font-weight:700; color:#b87c2c;">猫咪：' + (m.catName || '未知') + '</div>' +
+                            '<div class="msg-content">' + (m.message || '无内容') + '</div>' +
+                            imgTag +
+                            '<div class="msg-time">' + (m.createdAt ? m.createdAt.substring(0,16) : '') + '</div>' +
+                            '</div>';
+                    });
+                    container.innerHTML = html;
+                }
+                document.getElementById('messagesModal').style.display = 'flex';
+            });
+    }
+    function closeMessages() { document.getElementById('messagesModal').style.display = 'none'; }
+
     function logout() {
         if (confirm('确定要退出登录吗？')) {
             window.location.href = '<%= request.getContextPath() %>/logout';
         }
     }
-    window.onload = loadInventory;
+
+    window.onload = function() {
+        loadInventory();
+        checkUnreadMessages();
+        setInterval(checkUnreadMessages, 30000);
+    };
 </script>
 </body>
 </html>

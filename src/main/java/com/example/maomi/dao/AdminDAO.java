@@ -2,6 +2,7 @@ package com.example.maomi.dao;
 
 import com.example.maomi.model.Adoption;
 import com.example.maomi.model.Comment;
+import com.example.maomi.model.FeedingMessage;
 import com.example.maomi.model.User;
 import com.example.maomi.utils.DBUtil;
 
@@ -222,5 +223,100 @@ public class AdminDAO {
         ad.setReviewDate(rs.getTimestamp("review_date"));
         ad.setCancelTime(rs.getTimestamp("cancel_time"));
         return ad;
+    }
+
+    // 获取所有喂养中的猫咪（状态为“喂养中”）
+    public List<Map<String, Object>> getFeedingCats() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT c.id, c.name, c.image_path, fr.username AS feeder, fr.feed_time " +
+                "FROM cats c JOIN (SELECT cat_id, username, MAX(feed_time) AS feed_time FROM feeding_records GROUP BY cat_id, username) fr ON c.id = fr.cat_id " +
+                "WHERE c.state = '喂养中' ORDER BY fr.feed_time DESC";
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("catId", rs.getInt("id"));
+                row.put("catName", rs.getString("name"));
+                row.put("catImage", rs.getString("image_path"));
+                row.put("feeder", rs.getString("feeder"));
+                row.put("feedTime", rs.getTimestamp("feed_time"));
+                list.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    // 更新猫咪状态为“已喂养”
+    public boolean completeFeeding(int catId) {
+        String sql = "UPDATE cats SET state='在校' WHERE id=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, catId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }
+
+    // 插入喂养回复消息
+    public boolean insertFeedingMessage(int catId, String feederUsername, String message, String imagePath) {
+        String sql = "INSERT INTO feeding_messages (cat_id, feeder_username, message, image_path) VALUES (?,?,?,?)";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, catId);
+            stmt.setString(2, feederUsername);
+            stmt.setString(3, message);
+            stmt.setString(4, imagePath);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }
+
+    // 获取给某个用户的喂养回复消息
+    public List<FeedingMessage> getFeedingMessagesForUser(String feederUsername) {
+        List<FeedingMessage> list = new ArrayList<>();
+        String sql = "SELECT fm.*, c.name AS cat_name FROM feeding_messages fm " +
+                "JOIN cats c ON fm.cat_id = c.id WHERE fm.feeder_username=? ORDER BY fm.created_at DESC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, feederUsername);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                FeedingMessage msg = new FeedingMessage();
+                msg.setId(rs.getInt("id"));
+                msg.setCatId(rs.getInt("cat_id"));
+                msg.setFeederUsername(rs.getString("feeder_username"));
+                msg.setMessage(rs.getString("message"));
+                msg.setImagePath(rs.getString("image_path"));   // 新增
+                msg.setStatus(rs.getString("status"));
+                msg.setCreatedAt(rs.getTimestamp("created_at"));
+                msg.setCatName(rs.getString("cat_name"));       // 新增
+                list.add(msg);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+    // 获取未读喂养消息数量
+    public int getUnreadFeedingMessageCount(String feederUsername) {
+        String sql = "SELECT COUNT(*) FROM feeding_messages WHERE feeder_username=? AND status='未读'";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, feederUsername);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
+
+    // 将指定用户的所有喂养消息标记为已读
+    public boolean markFeedingMessagesAsRead(String feederUsername) {
+        String sql = "UPDATE feeding_messages SET status='已读' WHERE feeder_username=? AND status='未读'";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, feederUsername);
+            stmt.executeUpdate();
+            return true;
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
     }
 }

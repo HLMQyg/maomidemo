@@ -63,15 +63,15 @@
     .nav-links a:hover { background: #ffeed9; color: #8b5a10; }
     .user-badge { display: flex; align-items: center; gap: 8px; color: #8b5a10; font-weight: 600; }
 
-    /* 轮播图容器 */
+    /* 轮播图容器（缩窄宽度，去除白边） */
     .carousel-container {
-      max-width: 1200px;
+      max-width: 900px;           /* 比之前窄 */
       margin: 30px auto 20px;
       position: relative;
       border-radius: 24px;
       overflow: hidden;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      background: #fff;
+      background: transparent;    /* 容器本身无背景 */
     }
     .carousel-slides {
       display: flex;
@@ -80,9 +80,10 @@
     }
     .carousel-slide {
       min-width: 100%;
-      height: 400px;
-      background-size: cover;
+      height: 420px;              /* 高度适度降低 */
+      background-size: cover;     /* 改回 cover 填满区域 */
       background-position: center;
+      background-repeat: no-repeat;
       cursor: pointer;
       position: relative;
     }

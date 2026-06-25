@@ -1,4 +1,3 @@
-
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <%
     String adminName = (String) session.getAttribute("adminName");
@@ -242,9 +241,12 @@
         <a href="#" data-panel="comments">
             <span class="nav-icon">&#x1F4AC;</span> 评论管理
         </a>
-    
         <a href="#" data-panel="forum">
             <span class="nav-icon">&#x1F4DD;</span> 论坛管理
+        </a>
+        <!-- ===== 新增在线喂养菜单 ===== -->
+        <a href="#" data-panel="feeding">
+            <span class="nav-icon">&#x1F36C;</span> 在线喂养
         </a>
     </nav>
     <div class="sidebar-footer">
@@ -283,7 +285,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>ID</th><th>图片</th><th>名称</th><th>毛色</th><th>年龄</th><th>性别</th><th>状态</th><th>发现地点</th><th>操作</th></tr>
+                    <tr><th>ID</th><th>图片</th><th>名称</th><th>毛色</th><th>年龄</th><th>性别</th><th>状态</th><th>发现地点</th><th>操作</th></tr>
                     </thead>
                     <tbody id="catTbody"></tbody>
                 </table>
@@ -309,7 +311,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>ID</th><th>猫咪</th><th>申请人</th><th>电话</th><th>申请时间</th><th>状态</th><th>操作</th></tr>
+                    <tr><th>ID</th><th>猫咪</th><th>申请人</th><th>电话</th><th>申请时间</th><th>状态</th><th>操作</th></tr>
                     </thead>
                     <tbody id="adoptionTbody"></tbody>
                 </table>
@@ -330,7 +332,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>用户名</th><th>手机号</th><th>邮箱</th><th>地址</th><th>注册时间</th><th>最后登录</th><th>操作</th></tr>
+                    <tr><th>用户名</th><th>手机号</th><th>邮箱</th><th>地址</th><th>注册时间</th><th>最后登录</th><th>操作</th></tr>
                     </thead>
                     <tbody id="userTbody"></tbody>
                 </table>
@@ -348,7 +350,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                        <tr><th>ID</th><th>猫咪ID</th><th>用户</th><th>内容</th><th>时间</th><th>操作</th></tr>
+                    <tr><th>ID</th><th>猫咪ID</th><th>用户</th><th>内容</th><th>时间</th><th>操作</th></tr>
                     </thead>
                     <tbody id="commentTbody"></tbody>
                 </table>
@@ -356,8 +358,6 @@
         </div>
     </div>
 
-    <div 
-    <div 
     <div id="panel-forum" class="panel-wrap" style="display:none;">
         <div class="page-header">
             <h2>论坛管理</h2>
@@ -381,6 +381,25 @@
                 <table>
                     <thead><tr><th>ID</th><th>帖子</th><th>举报人</th><th>理由</th><th>状态</th><th>时间</th><th>操作</th></tr></thead>
                     <tbody id="reportTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 新增在线喂养面板 ===== -->
+    <div id="panel-feeding" class="panel-wrap" style="display:none;">
+        <div class="page-header">
+            <h2>在线喂养管理</h2>
+            <div class="breadcrumb">首页 / 在线喂养</div>
+        </div>
+        <div class="content-card">
+            <div class="card-toolbar"><h3>喂养中的猫咪</h3></div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr><th>猫咪</th><th>喂养人</th><th>最近喂养时间</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="feedingTbody"></tbody>
                 </table>
             </div>
         </div>
@@ -413,9 +432,6 @@
             <button class="btn btn-outline" style="flex:1;" onclick="handleReport('已驳回')">驳回举报</button>
         </div>
     </div>
-</div>
-
-</div>
 </div>
 
 <div class="modal-overlay" id="catModal">
@@ -458,293 +474,313 @@
     </div>
 </div>
 
+<!-- 喂养完成处理模态框（支持图片上传） -->
+<div class="modal-overlay" id="feedingCompleteModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeFeedingComplete()">&times;</button>
+        <h3>喂养完成确认</h3>
+        <p style="margin-bottom:12px;">将猫咪状态改为在校，并可给喂养人留言。</p>
+        <input type="hidden" id="completeCatId">
+        <input type="hidden" id="completeFeeder">
+        <div class="form-group">
+            <label>给喂养人的回复</label>
+            <textarea id="completeMessage" rows="3" placeholder="例如：感谢投喂~"></textarea>
+        </div>
+        <div class="form-group">
+            <label>上传图片（可选）</label>
+            <input type="file" id="completeImage" accept="image/*">
+        </div>
+        <button class="btn btn-primary" onclick="submitFeedingComplete()" style="width:100%;">确认完成</button>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script>
-var ctx = '<%= request.getContextPath() %>';
+    var ctx = '<%= request.getContextPath() %>';
 
-var navLinks = document.querySelectorAll('.sidebar-nav a');
-navLinks.forEach(function(a) {
-    a.onclick = function(e) {
-        e.preventDefault();
-        navLinks.forEach(function(l) { l.classList.remove('active'); });
-        this.classList.add('active');
-        var panel = this.getAttribute('data-panel');
-        document.querySelectorAll('.panel-wrap').forEach(function(p) { p.style.display = 'none'; });
-        document.getElementById('panel-' + panel).style.display = 'block';
-        if (panel === 'overview') { loadOverview(); }
-        else if (panel === 'cats') { loadCats(); }
-        else if (panel === 'adoptions') { loadAdoptions(); }
-        else if (panel === 'users') { loadUsers(); }
-        else if (panel === 'comments') { loadComments(); }
-        else if (panel === 'forum') { loadForumData(); }
-    };
-});
+    var navLinks = document.querySelectorAll('.sidebar-nav a');
+    navLinks.forEach(function(a) {
+        a.onclick = function(e) {
+            e.preventDefault();
+            navLinks.forEach(function(l) { l.classList.remove('active'); });
+            this.classList.add('active');
+            var panel = this.getAttribute('data-panel');
+            document.querySelectorAll('.panel-wrap').forEach(function(p) { p.style.display = 'none'; });
+            document.getElementById('panel-' + panel).style.display = 'block';
+            if (panel === 'overview') { loadOverview(); }
+            else if (panel === 'cats') { loadCats(); }
+            else if (panel === 'adoptions') { loadAdoptions(); }
+            else if (panel === 'users') { loadUsers(); }
+            else if (panel === 'comments') { loadComments(); }
+            else if (panel === 'forum') { loadForumData(); }
+            else if (panel === 'feeding') { loadFeedingList(); }   // ← 新增喂养面板加载
+        };
+    });
 
-function toast(msg, type) {
-    var t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast ' + (type || 'ok');
-    t.style.display = 'block';
-    clearTimeout(t._timer);
-    t._timer = setTimeout(function() { t.style.display = 'none'; }, 2500);
-}
+    function toast(msg, type) {
+        var t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = 'toast ' + (type || 'ok');
+        t.style.display = 'block';
+        clearTimeout(t._timer);
+        t._timer = setTimeout(function() { t.style.display = 'none'; }, 2500);
+    }
 
-function loadOverview() {
-    fetch(ctx + '/adminStats')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            var icons = [
-                { n: d.totalCats||0,     t: '猫咪总数',   c: 'orange', e: '\u{1F431}' },
-                { n: d.schoolCats||0,    t: '在校猫咪',   c: 'green',  e: '\u{1F3EB}' },
-                { n: d.adoptedCats||0,   t: '已领养',     c: 'blue',   e: '\u{1F3E0}' },
-                { n: d.totalUsers||0,    t: '用户总数',   c: 'purple', e: '\u{1F464}' },
-                { n: d.pendingAdoptions||0, t: '待审核申请', c: 'orange', e: '\u{23F3}' },
-                { n: d.approvedAdoptions||0, t: '已通过',  c: 'green',  e: '\u{2705}' },
-                { n: d.rejectedAdoptions||0, t: '已拒绝',  c: 'red',    e: '\u{274C}' },
-                { n: d.totalComments||0, t: '评论总数',   c: 'blue',   e: '\u{1F4AC}' }
-            ];
-            var h = '';
-            icons.forEach(function(item) {
-                h += '<div class="stat-card">' +
-                    '<div class="stat-icon-wrap ' + item.c + '">' + item.e + '</div>' +
-                    '<div class="stat-body"><div class="stat-num">' + item.n + '</div><div class="stat-desc">' + item.t + '</div></div>' +
-                    '</div>';
-            });
-            document.getElementById('statsRow').innerHTML = h;
-        })
-        .catch(function() { document.getElementById('statsRow').innerHTML = '<div style="color:#999;padding:20px;">数据加载失败</div>'; });
-
-    fetch(ctx + '/adminAdoption')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var recent = data.slice(0, 5);
-            var h = '';
-            if (recent.length === 0) {
-                h = '<div style="color:#bbb;text-align:center;padding:20px;">暂无申请</div>';
-            } else {
-                recent.forEach(function(a) {
-                    var tag = '';
-                    if (a.status === '\u5F85\u5BA1\u6838') tag = '<span class="tag tag-pending">\u5F85\u5BA1\u6838</span>';
-                    else if (a.status === '\u5DF2\u901A\u8FC7') tag = '<span class="tag tag-ok">\u5DF2\u901A\u8FC7</span>';
-                    else if (a.status === '\u5DF2\u62D2\u7EDD') tag = '<span class="tag tag-no">\u5DF2\u62D2\u7EDD</span>';
-                    else tag = a.status;
-                    h += '<div class="recent-item">' +
-                        '<div class="recent-info"><strong>' + (a.catName||'') + '</strong> \u2014 ' + (a.applicantName||'') + '</div>' +
-                        '<div>' + tag + ' <span class="recent-time">' + (a.applyDate?a.applyDate.substring(0,10):'') + '</span></div>' +
+    function loadOverview() {
+        fetch(ctx + '/adminStats')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var icons = [
+                    { n: d.totalCats||0,     t: '猫咪总数',   c: 'orange', e: '\u{1F431}' },
+                    { n: d.schoolCats||0,    t: '在校猫咪',   c: 'green',  e: '\u{1F3EB}' },
+                    { n: d.adoptedCats||0,   t: '已领养',     c: 'blue',   e: '\u{1F3E0}' },
+                    { n: d.totalUsers||0,    t: '用户总数',   c: 'purple', e: '\u{1F464}' },
+                    { n: d.pendingAdoptions||0, t: '待审核申请', c: 'orange', e: '\u{23F3}' },
+                    { n: d.approvedAdoptions||0, t: '已通过',  c: 'green',  e: '\u{2705}' },
+                    { n: d.rejectedAdoptions||0, t: '已拒绝',  c: 'red',    e: '\u{274C}' },
+                    { n: d.totalComments||0, t: '评论总数',   c: 'blue',   e: '\u{1F4AC}' }
+                ];
+                var h = '';
+                icons.forEach(function(item) {
+                    h += '<div class="stat-card">' +
+                        '<div class="stat-icon-wrap ' + item.c + '">' + item.e + '</div>' +
+                        '<div class="stat-body"><div class="stat-num">' + item.n + '</div><div class="stat-desc">' + item.t + '</div></div>' +
                         '</div>';
                 });
-            }
-            document.getElementById('recentList').innerHTML = h;
-        })
-        .catch(function() { document.getElementById('recentList').innerHTML = '<div style="color:#999;">加载失败</div>'; });
-}
+                document.getElementById('statsRow').innerHTML = h;
+            })
+            .catch(function() { document.getElementById('statsRow').innerHTML = '<div style="color:#999;padding:20px;">数据加载失败</div>'; });
 
-var _cats = [];
-function loadCats() {
-    fetch(ctx + '/adminCat')
-        .then(function(r) { return r.json(); })
-        .then(function(d) { _cats = d; renderCatTable(); })
-        .catch(function() { document.getElementById('catTbody').innerHTML = '<tr class="empty-row"><td colspan="9">加载失败</td></tr>'; });
-}
-function renderCatTable() {
-    var kw = (document.getElementById('catSearch').value || '').toLowerCase();
-    var list = _cats.filter(function(c) { return !kw || (c.name||'').toLowerCase().indexOf(kw) > -1; });
-    var h = '';
-    if (list.length === 0) {
-        h = '<tr class="empty-row"><td colspan="9">暂无数据</td></tr>';
-    } else {
-        list.forEach(function(c) {
-            var tag = c.state === '\u5728\u6821' ? '<span class="tag tag-ok">\u5728\u6821</span>' : '<span class="tag tag-info">\u5DF2\u9886\u517B</span>';
-            var img = c.imagePath ? (ctx + '/' + c.imagePath) : '';
-            h += '<tr>' +
-                '<td>' + c.id + '</td>' +
-                '<td>' + (img ? '<img src="' + img + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;" onerror="this.style.display=\'none\'">' : '') + '</td>' +
-                '<td><strong>' + (c.name||'') + '</strong></td>' +
-                '<td>' + (c.color||'') + '</td>' +
-                '<td>' + (c.age||0) + '\u6708</td>' +
-                '<td>' + (c.gender||'') + '</td>' +
-                '<td>' + tag + '</td>' +
-                '<td>' + (c.foundLocation||'') + '</td>' +
-                '<td class="cell-actions">' +
+        fetch(ctx + '/adminAdoption')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var recent = data.slice(0, 5);
+                var h = '';
+                if (recent.length === 0) {
+                    h = '<div style="color:#bbb;text-align:center;padding:20px;">暂无申请</div>';
+                } else {
+                    recent.forEach(function(a) {
+                        var tag = '';
+                        if (a.status === '\u5F85\u5BA1\u6838') tag = '<span class="tag tag-pending">\u5F85\u5BA1\u6838</span>';
+                        else if (a.status === '\u5DF2\u901A\u8FC7') tag = '<span class="tag tag-ok">\u5DF2\u901A\u8FC7</span>';
+                        else if (a.status === '\u5DF2\u62D2\u7EDD') tag = '<span class="tag tag-no">\u5DF2\u62D2\u7EDD</span>';
+                        else tag = a.status;
+                        h += '<div class="recent-item">' +
+                            '<div class="recent-info"><strong>' + (a.catName||'') + '</strong> \u2014 ' + (a.applicantName||'') + '</div>' +
+                            '<div>' + tag + ' <span class="recent-time">' + (a.applyDate?a.applyDate.substring(0,10):'') + '</span></div>' +
+                            '</div>';
+                    });
+                }
+                document.getElementById('recentList').innerHTML = h;
+            })
+            .catch(function() { document.getElementById('recentList').innerHTML = '<div style="color:#999;">加载失败</div>'; });
+    }
+
+    var _cats = [];
+    function loadCats() {
+        fetch(ctx + '/adminCat')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { _cats = d; renderCatTable(); })
+            .catch(function() { document.getElementById('catTbody').innerHTML = '<tr class="empty-row"><td colspan="9">加载失败</td></tr>'; });
+    }
+    function renderCatTable() {
+        var kw = (document.getElementById('catSearch').value || '').toLowerCase();
+        var list = _cats.filter(function(c) { return !kw || (c.name||'').toLowerCase().indexOf(kw) > -1; });
+        var h = '';
+        if (list.length === 0) {
+            h = '<tr class="empty-row"><td colspan="9">暂无数据</td></tr>';
+        } else {
+            list.forEach(function(c) {
+                var tag = c.state === '\u5728\u6821' ? '<span class="tag tag-ok">\u5728\u6821</span>' : '<span class="tag tag-info">\u5DF2\u9886\u517B</span>';
+                var img = c.imagePath ? (ctx + '/' + c.imagePath) : '';
+                h += '<tr>' +
+                    '<td>' + c.id + '</td>' +
+                    '<td>' + (img ? '<img src="' + img + '" style="width:40px;height:40px;border-radius:6px;object-fit:cover;" onerror="this.style.display=\'none\'">' : '') + '</td>' +
+                    '<td><strong>' + (c.name||'') + '</strong></td>' +
+                    '<td>' + (c.color||'') + '</td>' +
+                    '<td>' + (c.age||0) + '\u6708</td>' +
+                    '<td>' + (c.gender||'') + '</td>' +
+                    '<td>' + tag + '</td>' +
+                    '<td>' + (c.foundLocation||'') + '</td>' +
+                    '<td class="cell-actions">' +
                     '<button class="btn btn-outline btn-sm" onclick="editCat(' + c.id + ')">\u7F16\u8F91</button>' +
                     '<button class="btn btn-danger btn-sm" onclick="deleteCat(' + c.id + ')">\u5220\u9664</button>' +
-                '</td></tr>';
-        });
+                    '</td></tr>';
+            });
+        }
+        document.getElementById('catTbody').innerHTML = h;
     }
-    document.getElementById('catTbody').innerHTML = h;
-}
-function openCatForm() {
-    document.getElementById('catModalTitle').textContent = '\u6DFB\u52A0\u732B\u5496';
-    document.getElementById('catAction').value = 'add';
-    document.getElementById('catId').value = '';
-    document.getElementById('catForm').reset();
-    document.getElementById('catModal').classList.add('show');
-}
-function editCat(id) {
-    var c = _cats.find(function(x) { return x.id === id; });
-    if (!c) return;
-    document.getElementById('catModalTitle').textContent = '\u7F16\u8F91\u732B\u5496';
-    document.getElementById('catAction').value = 'update';
-    document.getElementById('catId').value = c.id;
-    document.getElementById('catName').value = c.name || '';
-    document.getElementById('catColor').value = c.color || '';
-    document.getElementById('catAge').value = c.age || 0;
-    document.getElementById('catGender').value = c.gender || '\u516C';
-    document.getElementById('catHealth').value = c.healthStatus || '';
-    document.getElementById('catDesc').value = c.description || '';
-    document.getElementById('catLoc').value = c.foundLocation || '';
-    document.getElementById('catDate').value = c.foundDate ? c.foundDate.substring(0,10) : '';
-    document.getElementById('catImg').value = c.imagePath || '';
-    document.getElementById('catModal').classList.add('show');
-}
-function closeCatForm() { document.getElementById('catModal').classList.remove('show'); }
-function submitCat(e) {
-    e.preventDefault();
-    var fd = new FormData(document.getElementById('catForm'));
-    var body = new URLSearchParams(fd).toString();
-    fetch(ctx + '/adminCat', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body })
-        .then(function(r) { return r.text(); })
-        .then(function(msg) {
-            if (msg === 'ok') { toast('\u64CD\u4F5C\u6210\u529F'); closeCatForm(); loadCats(); }
-            else toast(msg, 'err');
-        });
-}
-function deleteCat(id) {
-    if (!confirm('\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u53EA\u732B\u5496\u5417\uFF1F')) return;
-    fetch(ctx + '/adminCat', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id=' + id })
-        .then(function(r) { return r.text(); })
-        .then(function(msg) {
-            if (msg === 'ok') { toast('\u5DF2\u5220\u9664'); loadCats(); }
-            else toast(msg, 'err');
-        });
-}
-
-var _adoptions = [];
-function loadAdoptions() {
-    fetch(ctx + '/adminAdoption')
-        .then(function(r) { return r.json(); })
-        .then(function(d) { _adoptions = d; renderAdoptionTable(); })
-        .catch(function() { document.getElementById('adoptionTbody').innerHTML = '<tr class="empty-row"><td colspan="7">加载失败</td></tr>'; });
-}
-function renderAdoptionTable() {
-    var filter = document.getElementById('adoptFilter').value;
-    var list = _adoptions.filter(function(a) { return filter === 'all' || a.status === filter; });
-    var h = '';
-    if (list.length === 0) {
-        h = '<tr class="empty-row"><td colspan="7">暂无数据</td></tr>';
-    } else {
-        list.forEach(function(a) {
-            var tag = '';
-            if (a.status === '\u5F85\u5BA1\u6838') tag = '<span class="tag tag-pending">\u5F85\u5BA1\u6838</span>';
-            else if (a.status === '\u5DF2\u901A\u8FC7') tag = '<span class="tag tag-ok">\u5DF2\u901A\u8FC7</span>';
-            else if (a.status === '\u5DF2\u62D2\u7EDD') tag = '<span class="tag tag-no">\u5DF2\u62D2\u7EDD</span>';
-            else tag = a.status;
-            var act = a.status === '\u5F85\u5BA1\u6838'
-                ? '<button class="btn btn-primary btn-sm" onclick="openReview(' + a.id + ')">\u5BA1\u6838</button>'
-                : '<span style="color:#bbb;font-size:12px;">\u5DF2\u5904\u7406</span>';
-            h += '<tr>' +
-                '<td>' + a.id + '</td><td>' + (a.catName||'') + '</td><td>' + (a.applicantName||'') + '</td>' +
-                '<td>' + (a.applicantPhone||'') + '</td>' +
-                '<td style="font-size:12px;">' + (a.applyDate?a.applyDate.substring(0,10):'') + '</td>' +
-                '<td>' + tag + '</td><td class="cell-actions">' + act + '</td></tr>';
-        });
+    function openCatForm() {
+        document.getElementById('catModalTitle').textContent = '\u6DFB\u52A0\u732B\u5496';
+        document.getElementById('catAction').value = 'add';
+        document.getElementById('catId').value = '';
+        document.getElementById('catForm').reset();
+        document.getElementById('catModal').classList.add('show');
     }
-    document.getElementById('adoptionTbody').innerHTML = h;
-}
-function openReview(id) {
-    document.getElementById('reviewId').value = id;
-    document.getElementById('reviewNotes').value = '';
-    document.getElementById('reviewModal').classList.add('show');
-}
-function closeReview() { document.getElementById('reviewModal').classList.remove('show'); }
-function doReview(status) {
-    var id = document.getElementById('reviewId').value;
-    var notes = document.getElementById('reviewNotes').value;
-    var body = 'action=review&id=' + id + '&status=' + encodeURIComponent(status) + '&notes=' + encodeURIComponent(notes);
-    fetch(ctx + '/adminAdoption', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body })
-        .then(function(r) { return r.text(); })
-        .then(function(msg) {
-            if (msg === 'ok') { toast('\u5BA1\u6838\u5B8C\u6210'); closeReview(); loadAdoptions(); loadOverview(); }
-            else toast(msg, 'err');
-        });
-}
-
-var _users = [];
-function loadUsers() {
-    fetch(ctx + '/adminUser')
-        .then(function(r) { return r.json(); })
-        .then(function(d) { _users = d; renderUserTable(); })
-        .catch(function() { document.getElementById('userTbody').innerHTML = '<tr class="empty-row"><td colspan="7">加载失败</td></tr>'; });
-}
-function renderUserTable() {
-    var kw = (document.getElementById('userSearch').value || '').toLowerCase();
-    var list = _users.filter(function(u) { return !kw || (u.username||'').toLowerCase().indexOf(kw) > -1; });
-    var h = '';
-    if (list.length === 0) {
-        h = '<tr class="empty-row"><td colspan="7">暂无数据</td></tr>';
-    } else {
-        list.forEach(function(u) {
-            h += '<tr>' +
-                '<td><strong>' + (u.username||'') + '</strong></td>' +
-                '<td>' + (u.phone||'-') + '</td><td>' + (u.email||'-') + '</td>' +
-                '<td>' + (u.address||'-') + '</td>' +
-                '<td style="font-size:12px;">' + (u.registerDate?u.registerDate.substring(0,10):'-') + '</td>' +
-                '<td style="font-size:12px;">' + (u.lastLogin?u.lastLogin.substring(0,10):'-') + '</td>' +
-                '<td class="cell-actions"><button class="btn btn-danger btn-sm" onclick="deleteUser(\'' + (u.username||'') + '\')">\u5220\u9664</button></td></tr>';
-        });
+    function editCat(id) {
+        var c = _cats.find(function(x) { return x.id === id; });
+        if (!c) return;
+        document.getElementById('catModalTitle').textContent = '\u7F16\u8F91\u732B\u5496';
+        document.getElementById('catAction').value = 'update';
+        document.getElementById('catId').value = c.id;
+        document.getElementById('catName').value = c.name || '';
+        document.getElementById('catColor').value = c.color || '';
+        document.getElementById('catAge').value = c.age || 0;
+        document.getElementById('catGender').value = c.gender || '\u516C';
+        document.getElementById('catHealth').value = c.healthStatus || '';
+        document.getElementById('catDesc').value = c.description || '';
+        document.getElementById('catLoc').value = c.foundLocation || '';
+        document.getElementById('catDate').value = c.foundDate ? c.foundDate.substring(0,10) : '';
+        document.getElementById('catImg').value = c.imagePath || '';
+        document.getElementById('catModal').classList.add('show');
     }
-    document.getElementById('userTbody').innerHTML = h;
-}
-function deleteUser(uname) {
-    if (!confirm('\u786E\u5B9A\u8981\u5220\u9664\u7528\u6237 \u201C' + uname + '\u201D \u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002')) return;
-    fetch(ctx + '/adminUser', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&username=' + encodeURIComponent(uname) })
-        .then(function(r) { return r.text(); })
-        .then(function(msg) {
-            if (msg === 'ok') { toast('\u7528\u6237\u5DF2\u5220\u9664'); loadUsers(); loadOverview(); }
-            else toast(msg, 'err');
-        });
-}
-
-var _comments = [];
-function loadComments() {
-    fetch(ctx + '/adminComment')
-        .then(function(r) { return r.json(); })
-        .then(function(d) { _comments = d; renderCommentTable(); })
-        .catch(function() { document.getElementById('commentTbody').innerHTML = '<tr class="empty-row"><td colspan="6">加载失败</td></tr>'; });
-}
-function renderCommentTable() {
-    var h = '';
-    if (_comments.length === 0) {
-        h = '<tr class="empty-row"><td colspan="6">暂无数据</td></tr>';
-    } else {
-        _comments.forEach(function(c) {
-            h += '<tr>' +
-                '<td>' + c.id + '</td><td>' + c.catId + '</td><td>' + (c.username||'') + '</td>' +
-                '<td style="max-width:280px;">' + (c.comment||'') + '</td>' +
-                '<td style="font-size:12px;">' + (c.commentTime?c.commentTime.substring(0,16):'') + '</td>' +
-                '<td class="cell-actions"><button class="btn btn-danger btn-sm" onclick="deleteComment(' + c.id + ')">\u5220\u9664</button></td></tr>';
-        });
+    function closeCatForm() { document.getElementById('catModal').classList.remove('show'); }
+    function submitCat(e) {
+        e.preventDefault();
+        var fd = new FormData(document.getElementById('catForm'));
+        var body = new URLSearchParams(fd).toString();
+        fetch(ctx + '/adminCat', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body })
+            .then(function(r) { return r.text(); })
+            .then(function(msg) {
+                if (msg === 'ok') { toast('\u64CD\u4F5C\u6210\u529F'); closeCatForm(); loadCats(); }
+                else toast(msg, 'err');
+            });
     }
-    document.getElementById('commentTbody').innerHTML = h;
-}
-function deleteComment(id) {
-    if (!confirm('\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u6761\u8BC4\u8BBA\u5417\uFF1F')) return;
-    fetch(ctx + '/adminComment', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id=' + id })
-        .then(function(r) { return r.text(); })
-        .then(function(msg) {
-            if (msg === 'ok') { toast('\u5DF2\u5220\u9664'); loadComments(); loadOverview(); }
-            else toast(msg, 'err');
-        });
-}
-
-function doLogout() {
-    if (confirm('\u786E\u5B9A\u8981\u9000\u51FA\u767B\u5F55\u5417\uFF1F')) {
-        window.location.href = ctx + '/logout';
+    function deleteCat(id) {
+        if (!confirm('\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u53EA\u732B\u5496\u5417\uFF1F')) return;
+        fetch(ctx + '/adminCat', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id=' + id })
+            .then(function(r) { return r.text(); })
+            .then(function(msg) {
+                if (msg === 'ok') { toast('\u5DF2\u5220\u9664'); loadCats(); }
+                else toast(msg, 'err');
+            });
     }
-}
+
+    var _adoptions = [];
+    function loadAdoptions() {
+        fetch(ctx + '/adminAdoption')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { _adoptions = d; renderAdoptionTable(); })
+            .catch(function() { document.getElementById('adoptionTbody').innerHTML = '<tr class="empty-row"><td colspan="7">加载失败</td></tr>'; });
+    }
+    function renderAdoptionTable() {
+        var filter = document.getElementById('adoptFilter').value;
+        var list = _adoptions.filter(function(a) { return filter === 'all' || a.status === filter; });
+        var h = '';
+        if (list.length === 0) {
+            h = '<tr class="empty-row"><td colspan="7">暂无数据</td></tr>';
+        } else {
+            list.forEach(function(a) {
+                var tag = '';
+                if (a.status === '\u5F85\u5BA1\u6838') tag = '<span class="tag tag-pending">\u5F85\u5BA1\u6838</span>';
+                else if (a.status === '\u5DF2\u901A\u8FC7') tag = '<span class="tag tag-ok">\u5DF2\u901A\u8FC7</span>';
+                else if (a.status === '\u5DF2\u62D2\u7EDD') tag = '<span class="tag tag-no">\u5DF2\u62D2\u7EDD</span>';
+                else tag = a.status;
+                var act = a.status === '\u5F85\u5BA1\u6838'
+                    ? '<button class="btn btn-primary btn-sm" onclick="openReview(' + a.id + ')">\u5BA1\u6838</button>'
+                    : '<span style="color:#bbb;font-size:12px;">\u5DF2\u5904\u7406</span>';
+                h += '<tr>' +
+                    '<td>' + a.id + '</td><td>' + (a.catName||'') + '</td><td>' + (a.applicantName||'') + '</td>' +
+                    '<td>' + (a.applicantPhone||'') + '</td>' +
+                    '<td style="font-size:12px;">' + (a.applyDate?a.applyDate.substring(0,10):'') + '</td>' +
+                    '<td>' + tag + '</td><td class="cell-actions">' + act + '</td></tr>';
+            });
+        }
+        document.getElementById('adoptionTbody').innerHTML = h;
+    }
+    function openReview(id) {
+        document.getElementById('reviewId').value = id;
+        document.getElementById('reviewNotes').value = '';
+        document.getElementById('reviewModal').classList.add('show');
+    }
+    function closeReview() { document.getElementById('reviewModal').classList.remove('show'); }
+    function doReview(status) {
+        var id = document.getElementById('reviewId').value;
+        var notes = document.getElementById('reviewNotes').value;
+        var body = 'action=review&id=' + id + '&status=' + encodeURIComponent(status) + '&notes=' + encodeURIComponent(notes);
+        fetch(ctx + '/adminAdoption', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body })
+            .then(function(r) { return r.text(); })
+            .then(function(msg) {
+                if (msg === 'ok') { toast('\u5BA1\u6838\u5B8C\u6210'); closeReview(); loadAdoptions(); loadOverview(); }
+                else toast(msg, 'err');
+            });
+    }
+
+    var _users = [];
+    function loadUsers() {
+        fetch(ctx + '/adminUser')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { _users = d; renderUserTable(); })
+            .catch(function() { document.getElementById('userTbody').innerHTML = '<tr class="empty-row"><td colspan="7">加载失败</td></tr>'; });
+    }
+    function renderUserTable() {
+        var kw = (document.getElementById('userSearch').value || '').toLowerCase();
+        var list = _users.filter(function(u) { return !kw || (u.username||'').toLowerCase().indexOf(kw) > -1; });
+        var h = '';
+        if (list.length === 0) {
+            h = '<tr class="empty-row"><td colspan="7">暂无数据</td></tr>';
+        } else {
+            list.forEach(function(u) {
+                h += '<tr>' +
+                    '<td><strong>' + (u.username||'') + '</strong></td>' +
+                    '<td>' + (u.phone||'-') + '</td><td>' + (u.email||'-') + '</td>' +
+                    '<td>' + (u.address||'-') + '</td>' +
+                    '<td style="font-size:12px;">' + (u.registerDate?u.registerDate.substring(0,10):'-') + '</td>' +
+                    '<td style="font-size:12px;">' + (u.lastLogin?u.lastLogin.substring(0,10):'-') + '</td>' +
+                    '<td class="cell-actions"><button class="btn btn-danger btn-sm" onclick="deleteUser(\'' + (u.username||'') + '\')">\u5220\u9664</button></td></tr>';
+            });
+        }
+        document.getElementById('userTbody').innerHTML = h;
+    }
+    function deleteUser(uname) {
+        if (!confirm('\u786E\u5B9A\u8981\u5220\u9664\u7528\u6237 \u201C' + uname + '\u201D \u5417\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002')) return;
+        fetch(ctx + '/adminUser', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&username=' + encodeURIComponent(uname) })
+            .then(function(r) { return r.text(); })
+            .then(function(msg) {
+                if (msg === 'ok') { toast('\u7528\u6237\u5DF2\u5220\u9664'); loadUsers(); loadOverview(); }
+                else toast(msg, 'err');
+            });
+    }
+
+    var _comments = [];
+    function loadComments() {
+        fetch(ctx + '/adminComment')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { _comments = d; renderCommentTable(); })
+            .catch(function() { document.getElementById('commentTbody').innerHTML = '<tr class="empty-row"><td colspan="6">加载失败</td></tr>'; });
+    }
+    function renderCommentTable() {
+        var h = '';
+        if (_comments.length === 0) {
+            h = '<tr class="empty-row"><td colspan="6">暂无数据</td></tr>';
+        } else {
+            _comments.forEach(function(c) {
+                h += '<tr>' +
+                    '<td>' + c.id + '</td><td>' + c.catId + '</td><td>' + (c.username||'') + '</td>' +
+                    '<td style="max-width:280px;">' + (c.comment||'') + '</td>' +
+                    '<td style="font-size:12px;">' + (c.commentTime?c.commentTime.substring(0,16):'') + '</td>' +
+                    '<td class="cell-actions"><button class="btn btn-danger btn-sm" onclick="deleteComment(' + c.id + ')">\u5220\u9664</button></td></tr>';
+            });
+        }
+        document.getElementById('commentTbody').innerHTML = h;
+    }
+    function deleteComment(id) {
+        if (!confirm('\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u6761\u8BC4\u8BBA\u5417\uFF1F')) return;
+        fetch(ctx + '/adminComment', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id=' + id })
+            .then(function(r) { return r.text(); })
+            .then(function(msg) {
+                if (msg === 'ok') { toast('\u5DF2\u5220\u9664'); loadComments(); loadOverview(); }
+                else toast(msg, 'err');
+            });
+    }
+
+    function doLogout() {
+        if (confirm('\u786E\u5B9A\u8981\u9000\u51FA\u767B\u5F55\u5417\uFF1F')) {
+            window.location.href = ctx + '/logout';
+        }
+    }
 
 
-    
     var _forumThreads = [];
     var _reports = [];
     function loadForumData() {
@@ -756,30 +792,30 @@ function doLogout() {
         if(_forumThreads.length===0){h='<tr class="empty-row"><td colspan="9">暂无帖子</td></tr>'}
         else{_forumThreads.forEach(function(t){
             h+='<tr><td>'+t.id+'</td><td><strong>'+(t.title||'')+'</strong></td><td>'+(t.userId||'')+'</td><td>'+(t.category||'')+'</td>'+
-            '<td>'+(t.isPinned==1?'<span class="tag tag-ok">是</span>':'<span class="tag tag-no">否</span>')+'</td>'+
-            '<td>'+(t.isHidden==1?'<span class="tag tag-pending">已隐藏</span>':'<span class="tag tag-ok">显示</span>')+'</td>'+
-            '<td>'+t.likeCount+'/'+t.commentCount+'/'+t.viewCount+'</td>'+
-            '<td style="font-size:12px;">'+(t.createdAt?t.createdAt.substring(0,10):'')+'</td>'+
-            '<td class="cell-actions">'+
+                '<td>'+(t.isPinned==1?'<span class="tag tag-ok">是</span>':'<span class="tag tag-no">否</span>')+'</td>'+
+                '<td>'+(t.isHidden==1?'<span class="tag tag-pending">已隐藏</span>':'<span class="tag tag-ok">显示</span>')+'</td>'+
+                '<td>'+t.likeCount+'/'+t.commentCount+'/'+t.viewCount+'</td>'+
+                '<td style="font-size:12px;">'+(t.createdAt?t.createdAt.substring(0,10):'')+'</td>'+
+                '<td class="cell-actions">'+
                 '<button class="btn btn-sm '+(t.isPinned==1?'btn-outline':'btn-primary')+'" onclick="togglePin('+t.id+','+(t.isPinned==1?0:1)+')">'+(t.isPinned==1?'取消置顶':'置顶')+'</button>'+
                 '<button class="btn btn-sm '+(t.isHidden==1?'btn-primary':'btn-outline')+'" onclick="toggleHide('+t.id+','+(t.isHidden==1?0:1)+')">'+(t.isHidden==1?'上架':'下架')+'</button>'+
                 '<button class="btn btn-sm btn-danger" onclick="deleteForumThread('+t.id+')">删除</button>'+
-            '</td></tr>';
+                '</td></tr>';
         })}
         document.getElementById('forumTbody').innerHTML=h;
     }
     function togglePin(id,pinned){
         fetch(ctx+'/adminForum',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=pin&id='+id+'&pinned='+pinned})
-        .then(function(r){return r.text()}).then(function(m){if(m==='ok')loadForumData()});
+            .then(function(r){return r.text()}).then(function(m){if(m==='ok')loadForumData()});
     }
     function toggleHide(id,hidden){
         fetch(ctx+'/adminForum',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=hide&id='+id+'&hidden='+hidden})
-        .then(function(r){return r.text()}).then(function(m){if(m==='ok')loadForumData()});
+            .then(function(r){return r.text()}).then(function(m){if(m==='ok')loadForumData()});
     }
     function deleteForumThread(id){
         if(!confirm('确定删除此帖子？'))return;
         fetch(ctx+'/adminForum',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=delete&id='+id})
-        .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('已删除');loadForumData()}else toast(m,'err')});
+            .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('已删除');loadForumData()}else toast(m,'err')});
     }
     function renderReportTable(){
         var h='';
@@ -803,7 +839,7 @@ function doLogout() {
         var threadId=document.getElementById('reportThreadId').value;
         var notes=document.getElementById('reportHandleNotes').value;
         fetch(ctx+'/adminForum',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=handleReport&id='+id+'&threadId='+threadId+'&status='+encodeURIComponent(status)+'&notes='+encodeURIComponent(notes)})
-        .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('处理完成');closeReportHandle();loadForumData()}else toast(m,'err')});
+            .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('处理完成');closeReportHandle();loadForumData()}else toast(m,'err')});
     }
     function openAdminPostForm(){document.getElementById('adminPostModal').classList.add('show')}
     function closeAdminPostForm(){document.getElementById('adminPostModal').classList.remove('show')}
@@ -813,10 +849,106 @@ function doLogout() {
         var content=document.getElementById('adminPostContent').value;
         var category=document.getElementById('adminPostCat').value;
         fetch(ctx+'/adminForum',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'action=post&title='+encodeURIComponent(title)+'&content='+encodeURIComponent(content)+'&category='+encodeURIComponent(category)})
-        .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('发帖成功');closeAdminPostForm();loadForumData();document.getElementById('adminPostTitle').value='';document.getElementById('adminPostContent').value=''}else toast(m,'err')});
+            .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('发帖成功');closeAdminPostForm();loadForumData();document.getElementById('adminPostTitle').value='';document.getElementById('adminPostContent').value=''}else toast(m,'err')});
     }
 
-loadOverview();
+    /* ===== 新增在线喂养相关函数 ===== */
+    function loadFeedingList() {
+        fetch(ctx + '/adminFeeding?action=list')
+            .then(r => r.json())
+            .then(data => {
+                var tbody = document.getElementById('feedingTbody');
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">暂无喂养中的猫咪</td></tr>';
+                    return;
+                }
+                var html = '';
+                data.forEach(function(row) {
+                    var img = row.catImage ? (ctx + '/' + row.catImage) : '';
+                    html += '<tr>' +
+                        '<td style="display:flex;align-items:center;gap:8px;">' +
+                        (img ? '<img src="' + img + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">' : '') +
+                        '<strong>' + (row.catName || '') + '</strong>' +
+                        '</td>' +
+                        '<td>' + (row.feeder || '') + '</td>' +
+                        '<td style="font-size:12px;">' + (row.feedTime ? row.feedTime.substring(0,16) : '') + '</td>' +
+                        '<td><button class="btn btn-success btn-sm" onclick="openFeedingComplete(' + row.catId + ',\'' + (row.feeder || '') + '\')">完成喂养</button></td>' +
+                        '</tr>';
+                });
+                tbody.innerHTML = html;
+            });
+    }
+
+    function openFeedingComplete(catId, feeder) {
+        document.getElementById('completeCatId').value = catId;
+        document.getElementById('completeFeeder').value = feeder;
+        document.getElementById('completeMessage').value = '';
+        document.getElementById('feedingCompleteModal').classList.add('show');
+    }
+
+    function closeFeedingComplete() {
+        document.getElementById('feedingCompleteModal').classList.remove('show');
+    }
+
+    function submitFeedingComplete() {
+        var catId = document.getElementById('completeCatId').value;
+        var feeder = document.getElementById('completeFeeder').value;
+        var message = document.getElementById('completeMessage').value;
+        var imageFile = document.getElementById('completeImage').files[0];
+
+        var formData = new FormData();
+        formData.append('action', 'complete');
+        formData.append('catId', catId);
+        formData.append('feeder', feeder);
+        formData.append('message', message);
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        fetch(ctx + '/adminFeeding', {
+            method: 'POST',
+            body: formData
+        }).then(r => r.text()).then(msg => {
+            if (msg === 'ok') {
+                toast('喂养已完成并回复');
+                closeFeedingComplete();
+                loadFeedingList();
+                loadOverview();
+            } else {
+                toast(msg, 'err');
+            }
+        });
+    }function submitFeedingComplete() {
+        var catId = document.getElementById('completeCatId').value;
+        var feeder = document.getElementById('completeFeeder').value;
+        var message = document.getElementById('completeMessage').value;
+        var imageFile = document.getElementById('completeImage').files[0];
+
+        var formData = new FormData();
+        formData.append('action', 'complete');
+        formData.append('catId', catId);
+        formData.append('feeder', feeder);
+        formData.append('message', message);
+        if (imageFile) {
+            formData.append('image', imageFile);
+        }
+
+        fetch(ctx + '/adminFeeding', {
+            method: 'POST',
+            body: formData
+        }).then(r => r.text()).then(msg => {
+            if (msg === 'ok') {
+                toast('喂养已完成并回复');
+                closeFeedingComplete();
+                loadFeedingList();
+                loadOverview();
+            } else {
+                toast(msg, 'err');
+            }
+        });
+    }
+
+    loadOverview();
 
 </script>
 </body>
