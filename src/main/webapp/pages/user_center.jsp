@@ -15,6 +15,15 @@
     CatDAO catDAO = new CatDAO();
     Set<Integer> favIds = favDAO.getFavoriteCatIds(sessionUser.getUsername());
     List<Cat> favoriteCats = catDAO.getCatsByIds(favIds);
+
+    // 获取猫咪统计数据
+    List<Cat> allCats = catDAO.getAllCats();
+    int totalCats = allCats.size();
+    int adoptedCount = 0;
+    for (Cat c : allCats) {
+        if ("已领养".equals(c.getState())) adoptedCount++;
+    }
+    int availableCount = totalCats - adoptedCount;
 %>
 <!DOCTYPE html>
 <html>
@@ -63,6 +72,21 @@
         }
         .logout-btn:hover { background: #e6a14c; color: white; }
         .container { max-width: 900px; margin: 30px auto; padding: 20px; }
+
+        /* 统计卡片 */
+        .stats-row {
+            display: flex; justify-content: center; gap: 30px;
+            padding: 20px 20px 10px;
+        }
+        .stat-card {
+            background: white; border-radius: 20px; padding: 20px 30px;
+            text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+            min-width: 140px; transition: 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-number { font-size: 32px; font-weight: 700; color: #e6a14c; }
+        .stat-label { color: #b3904f; font-size: 14px; margin-top: 4px; }
+
         .card {
             background: white; border-radius: 24px; padding: 25px; margin-bottom: 25px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.06);
@@ -149,14 +173,12 @@
 <nav class="navbar">
     <div class="nav-logo">🐾 校园流浪猫</div>
     <div class="nav-links">
-        <div class="nav-links">
-            <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
-            <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
-            <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
-            <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
-            <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
-            <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
-        </div>
+        <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
+        <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
+        <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
+        <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
+        <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
+        <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
     </div>
     <div class="user-badge">
         🐱 <%= sessionUser.getUsername() %>
@@ -165,6 +187,23 @@
 </nav>
 
 <div class="container">
+    <%-- 统计卡片 --%>
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-number"><%= totalCats %></div>
+            <div class="stat-label">🐾 猫咪总数</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number"><%= adoptedCount %></div>
+            <div class="stat-label">🏠 已领养</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number"><%= availableCount %></div>
+            <div class="stat-label">💛 等待领养</div>
+        </div>
+    </div>
+
+    <%-- 操作结果提示 --%>
     <% if (request.getParameter("msg") != null) { %>
     <% if ("pwd_ok".equals(request.getParameter("msg"))) { %>
     <div class="msg">✅ 密码修改成功</div>
@@ -344,6 +383,7 @@
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: 'catId=' + currentCatId +
+                '&catName=' + encodeURIComponent(document.getElementById('modalName').innerText) +
                 '&applicantName=' + encodeURIComponent(name) +
                 '&applicantPhone=' + encodeURIComponent(phone) +
                 '&applicantAddress=' + encodeURIComponent(address) +

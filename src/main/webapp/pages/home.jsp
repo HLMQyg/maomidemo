@@ -15,14 +15,6 @@
   // 获取猫咪列表
   CatDAO catDAO = new CatDAO();
   List<Cat> cats = catDAO.getAllCats();  // 所有猫咪（含已领养）
-  // 统计数据
-  int totalCats = cats.size();
-  int adoptedCount = 0;
-  for (Cat c : cats) {
-    if ("已领养".equals(c.getState())) adoptedCount++;
-  }
-  int availableCount = totalCats - adoptedCount;
-
   // 获取当前用户收藏的猫咪ID集合
   FavoriteDAO favDAO = new FavoriteDAO();
   Set<Integer> favoriteCatIds = favDAO.getFavoriteCatIds(sessionUser.getUsername());
@@ -35,11 +27,10 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #fffaf3; /* 暖杏色底 */
+      background: #fffaf3;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
       position: relative;
     }
-    /* 背景柔光图案（使用与登录页类似的图片，低透明度） */
     body::before {
       content: "";
       position: fixed;
@@ -63,358 +54,163 @@
       top: 0;
       z-index: 100;
     }
-    .nav-logo {
-      font-size: 22px;
-      font-weight: 700;
-      color: #b87c2c;
-      letter-spacing: 1px;
-    }
-    .nav-links {
-      display: flex;
-      gap: 25px;
-    }
+    .nav-logo { font-size: 22px; font-weight: 700; color: #b87c2c; letter-spacing: 1px; }
+    .nav-links { display: flex; gap: 25px; }
     .nav-links a {
-      text-decoration: none;
-      color: #a66a1a;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 20px;
-      transition: 0.2s;
-      font-size: 15px;
+      text-decoration: none; color: #a66a1a; font-weight: 600;
+      padding: 6px 14px; border-radius: 20px; transition: 0.2s; font-size: 15px;
     }
-    .nav-links a:hover {
-      background: #ffeed9;
-      color: #8b5a10;
+    .nav-links a:hover { background: #ffeed9; color: #8b5a10; }
+    .user-badge { display: flex; align-items: center; gap: 8px; color: #8b5a10; font-weight: 600; }
+
+    /* 轮播图容器 */
+    .carousel-container {
+      max-width: 1200px;
+      margin: 30px auto 20px;
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      background: #fff;
     }
-    .user-badge {
+    .carousel-slides {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #8b5a10;
-      font-weight: 600;
+      transition: transform 0.5s ease-in-out;
+      width: 100%;
     }
-    /* 统计卡片区 */
-    .stats-row {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      padding: 30px 20px 10px;
-    }
-    .stat-card {
-      background: white;
-      border-radius: 20px;
-      padding: 20px 30px;
-      text-align: center;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
-      min-width: 140px;
-      transition: 0.3s;
-    }
-    .stat-card:hover { transform: translateY(-3px); }
-    .stat-number {
-      font-size: 32px;
-      font-weight: 700;
-      color: #e6a14c;
-    }
-    .stat-label {
-      color: #b3904f;
-      font-size: 14px;
-      margin-top: 4px;
-    }
-    /* 搜索框 */
-    .search-area {
-      text-align: center;
-      margin: 10px 0 25px;
-    }
-    .search-area input {
-      padding: 12px 20px;
-      width: 320px;
-      border: 2px solid #f0d9b5;
-      border-radius: 30px;
-      background: white;
-      font-size: 15px;
-      outline: none;
-      transition: 0.3s;
-    }
-    .search-area input:focus {
-      border-color: #e6a14c;
-      box-shadow: 0 0 0 4px rgba(230,161,76,0.15);
-    }
-    .search-area button {
-      padding: 12px 22px;
-      background: #e6a14c;
-      color: white;
-      border: none;
-      border-radius: 30px;
-      font-weight: 700;
-      margin-left: 10px;
+    .carousel-slide {
+      min-width: 100%;
+      height: 400px;
+      background-size: cover;
+      background-position: center;
       cursor: pointer;
-      transition: 0.3s;
+      position: relative;
+    }
+    .carousel-slide::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 80px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.4));
+    }
+    .carousel-dots {
+      position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px;
+    }
+    .carousel-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(255,255,255,0.5); cursor: pointer; transition: background 0.3s;
+    }
+    .carousel-dot.active { background: #e6a14c; width: 24px; border-radius: 5px; }
+    .carousel-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.7); border: none; font-size: 24px;
+      padding: 10px 14px; cursor: pointer; border-radius: 50%;
+      color: #b87c2c; font-weight: bold; transition: background 0.3s;
+    }
+    .carousel-arrow:hover { background: rgba(255,255,255,0.95); }
+    .carousel-arrow.left { left: 10px; }
+    .carousel-arrow.right { right: 10px; }
+
+    /* 搜索框 */
+    .search-area { text-align: center; margin: 10px 0 25px; }
+    .search-area input {
+      padding: 12px 20px; width: 320px; border: 2px solid #f0d9b5;
+      border-radius: 30px; background: white; font-size: 15px; outline: none; transition: 0.3s;
+    }
+    .search-area input:focus { border-color: #e6a14c; box-shadow: 0 0 0 4px rgba(230,161,76,0.15); }
+    .search-area button {
+      padding: 12px 22px; background: #e6a14c; color: white;
+      border: none; border-radius: 30px; font-weight: 700; margin-left: 10px;
+      cursor: pointer; transition: 0.3s;
     }
     .search-area button:hover { background: #c97d2a; }
+
     /* 猫咪卡片网格 */
     .cat-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 25px;
-      padding: 0 40px 50px;
-      max-width: 1200px;
-      margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 25px; padding: 0 40px 50px; max-width: 1200px; margin: 0 auto;
     }
     .cat-card {
-      background: white;
-      border-radius: 22px;
-      overflow: hidden;
-      box-shadow: 0 8px 22px rgba(0,0,0,0.06);
-      transition: 0.3s;
-      display: flex;
-      flex-direction: column;
+      background: white; border-radius: 22px; overflow: hidden;
+      box-shadow: 0 8px 22px rgba(0,0,0,0.06); transition: 0.3s;
+      display: flex; flex-direction: column;
     }
-    .cat-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-    }
-    .cat-image {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-    }
-    .cat-info {
-      padding: 16px;
-      flex: 1;
-    }
-    .cat-name {
-      font-size: 20px;
-      font-weight: 700;
-      color: #6f4518;
-    }
-    .cat-meta {
-      color: #a68a64;
-      font-size: 14px;
-      margin: 5px 0;
-    }
+    .cat-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+    .cat-image { width: 100%; height: 200px; object-fit: cover; }
+    .cat-info { padding: 16px; flex: 1; }
+    .cat-name { font-size: 20px; font-weight: 700; color: #6f4518; }
+    .cat-meta { color: #a68a64; font-size: 14px; margin: 5px 0; }
     .state-badge {
-      display: inline-block;
-      padding: 3px 12px;
-      border-radius: 15px;
-      font-size: 13px;
-      font-weight: 600;
-      margin-top: 8px;
+      display: inline-block; padding: 3px 12px; border-radius: 15px;
+      font-size: 13px; font-weight: 600; margin-top: 8px;
     }
     .state-school { background: #e6f7e6; color: #2d6a2d; }
     .state-adopted { background: #fde8d0; color: #b85c1a; }
-
-    /* 收藏图标样式 */
     .fav-icon {
-      font-size: 22px;
-      color: #f4b26a;
-      cursor: pointer;
-      margin-left: 10px;
-      vertical-align: middle;
-      transition: 0.2s;
-      display: inline-block;
+      font-size: 22px; color: #f4b26a; cursor: pointer; margin-left: 10px;
+      vertical-align: middle; transition: 0.2s; display: inline-block;
     }
-    .fav-icon.favorited {
-      color: #e6a14c;
-    }
-    .fav-icon:hover {
-      transform: scale(1.2);
-    }
+    .fav-icon.favorited { color: #e6a14c; }
+    .fav-icon:hover { transform: scale(1.2); }
 
-    .comment-section {
-      border-top: 1px solid #f3e0cc;
-      padding: 14px 16px;
-      background: #fefaf5;
-    }
-    .comment-list {
-      max-height: 100px;
-      overflow-y: auto;
-      margin-bottom: 8px;
-      font-size: 13px;
-    }
-    .comment-item {
-      padding: 4px 0;
-      color: #6f4518;
-      border-bottom: 1px dashed #f0d9b5;
-    }
-    .comment-item strong {
-      color: #e6a14c;
-    }
-    .comment-input {
-      display: flex;
-      gap: 8px;
-    }
-    .comment-input input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid #f0d9b5;
-      border-radius: 15px;
-      font-size: 13px;
-    }
-    .comment-input button {
-      padding: 8px 14px;
-      background: #e6a14c;
-      color: white;
-      border: none;
-      border-radius: 15px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    /* ===== 新增：猫咪详情模态框样式 ===== */
+    /* 模态框 */
     .modal-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 200;
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); display: none; justify-content: center;
+      align-items: center; z-index: 200;
     }
     .modal-content {
-      background: #fffef9;
-      width: 500px;
-      max-height: 80vh;
-      border-radius: 24px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-      padding: 30px;
-      overflow-y: auto;
-      position: relative;
-      animation: modalSlide 0.3s ease;
+      background: #fffef9; width: 500px; max-height: 80vh; border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2); padding: 30px; overflow-y: auto;
+      position: relative; animation: modalSlide 0.3s ease;
     }
     @keyframes modalSlide {
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    .modal-close {
-      position: absolute;
-      top: 15px; right: 20px;
-      font-size: 28px;
-      cursor: pointer;
-      color: #b3904f;
-    }
-    .modal-cat-image {
-      width: 100%;
-      height: 250px;
-      object-fit: cover;
-      border-radius: 16px;
-      margin-bottom: 15px;
-    }
-    .modal-field {
-      margin-bottom: 10px;
-      font-size: 14px;
-      color: #6f4518;
-    }
-    .modal-field strong {
-      color: #b87c2c;
-    }
-    .modal-comments {
-      max-height: 200px;
-      overflow-y: auto;
-      margin: 15px 0;
-      border-top: 1px solid #f0d9b5;
-      border-bottom: 1px solid #f0d9b5;
-      padding: 10px 0;
-    }
+    .modal-close { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; color: #b3904f; }
+    .modal-cat-image { width: 100%; height: 250px; object-fit: cover; border-radius: 16px; margin-bottom: 15px; }
+    .modal-field { margin-bottom: 10px; font-size: 14px; color: #6f4518; }
+    .modal-field strong { color: #b87c2c; }
     .adopt-btn, .disabled-btn {
-      width: 100%;
-      padding: 12px;
-      border-radius: 12px;
-      border: none;
-      font-weight: 700;
-      margin-top: 10px;
-      cursor: pointer;
+      width: 100%; padding: 12px; border-radius: 12px; border: none;
+      font-weight: 700; margin-top: 10px; cursor: pointer;
     }
-    .adopt-btn {
-      background: #e6a14c;
-      color: white;
-    }
-    .adopt-btn:hover {
-      background: #c97d2a;
-    }
-    .disabled-btn {
-      background: #f0d9b5;
-      color: #8b5a10;
-      cursor: not-allowed;
-    }
-    .adopt-form input, .adopt-form textarea {
-      width: 100%;
-      margin: 8px 0;
-      padding: 10px;
-      border-radius: 10px;
-      border: 1px solid #f0d9b5;
-      font-family: "Microsoft YaHei", sans-serif;
-    }
-    /* 退出登录按钮样式 */
-    .logout-btn {
-      background: none;
-      border: 1px solid #e6a14c;
-      color: #e6a14c;
-      padding: 5px 15px;
-      border-radius: 20px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: 0.2s;
-      margin-left: 15px;
-    }
-    .logout-btn:hover {
-      background: #e6a14c;
-      color: white;
-    }
-    /* ===== 领养申请表单样式 ===== */
+    .adopt-btn { background: #e6a14c; color: white; }
+    .adopt-btn:hover { background: #c97d2a; }
+    .disabled-btn { background: #f0d9b5; color: #8b5a10; cursor: not-allowed; }
     #adoptFormArea {
-      background: #fef9f2;
-      border-radius: 18px;
-      padding: 20px;
-      margin-top: 15px;
-      border: 1px solid #f5e0c4;
+      background: #fef9f2; border-radius: 18px; padding: 20px;
+      margin-top: 15px; border: 1px solid #f5e0c4;
     }
-    #adoptFormArea h4 {
-      margin: 0 0 15px 0;
-      color: #b87c2c;
-      font-size: 17px;
-    }
-    #adoptFormArea label {
-      display: block;
-      font-size: 13px;
-      color: #b3904f;
-      margin-bottom: 4px;
-      margin-top: 12px;
-      font-weight: 600;
-    }
+    #adoptFormArea h4 { margin: 0 0 15px 0; color: #b87c2c; font-size: 17px; }
+    #adoptFormArea label { display: block; font-size: 13px; color: #b3904f; margin-bottom: 4px; margin-top: 12px; font-weight: 600; }
     #adoptFormArea input,
     #adoptFormArea textarea {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1.5px solid #f0d9b5;
-      border-radius: 12px;
-      font-size: 14px;
-      font-family: "Microsoft YaHei", sans-serif;
-      background: #fffef9;
-      transition: 0.3s;
-      outline: none;
-      resize: vertical;
+      width: 100%; padding: 10px 14px; border: 1.5px solid #f0d9b5;
+      border-radius: 12px; font-size: 14px; background: #fffef9; transition: 0.3s;
+      outline: none; resize: vertical;
     }
     #adoptFormArea input:focus,
     #adoptFormArea textarea:focus {
-      border-color: #e6a14c;
-      box-shadow: 0 0 0 3px rgba(230,161,76,0.12);
-      background: #fff;
+      border-color: #e6a14c; box-shadow: 0 0 0 3px rgba(230,161,76,0.12); background: #fff;
     }
     #adoptFormArea .adopt-btn {
-      margin-top: 18px;
-      background: linear-gradient(135deg, #f4b26a, #e6a14c);
-      box-shadow: 0 6px 16px rgba(230,161,76,0.25);
-      border-radius: 14px;
-      font-size: 15px;
-      transition: 0.3s;
+      margin-top: 18px; background: linear-gradient(135deg, #f4b26a, #e6a14c);
+      box-shadow: 0 6px 16px rgba(230,161,76,0.25); border-radius: 14px;
+      font-size: 15px; transition: 0.3s;
     }
     #adoptFormArea .adopt-btn:hover {
       background: linear-gradient(135deg, #e6a14c, #c97d2a);
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(230,161,76,0.35);
+      transform: translateY(-1px); box-shadow: 0 8px 20px rgba(230,161,76,0.35);
     }
-
+    .logout-btn {
+      background: none; border: 1px solid #e6a14c; color: #e6a14c;
+      padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: 600;
+      transition: 0.2s; margin-left: 15px;
+    }
+    .logout-btn:hover { background: #e6a14c; color: white; }
   </style>
 </head>
 <body>
@@ -422,14 +218,12 @@
 <nav class="navbar">
   <div class="nav-logo">🐾 校园流浪猫</div>
   <div class="nav-links">
-    <div class="nav-links">
-      <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
-      <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
-      <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
-      <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
-      <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
-      <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
-    </div>
+    <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
+    <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
+    <a href="<%= request.getContextPath() %>/pages/forum.jsp">💬 论坛</a>
+    <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
+    <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
+    <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
   </div>
   <div class="user-badge">
     🐱 <%= sessionUser.getUsername() %>
@@ -437,21 +231,23 @@
   </div>
 </nav>
 
-<!-- 统计卡片 -->
-<div class="stats-row">
-  <div class="stat-card">
-    <div class="stat-number"><%= totalCats %></div>
-    <div class="stat-label">🐾 猫咪总数</div>
+<!-- 轮播图 -->
+<% if (cats != null && !cats.isEmpty()) { %>
+<div class="carousel-container">
+  <div class="carousel-slides" id="carouselSlides">
+    <% for (Cat cat : cats) { %>
+    <div class="carousel-slide" style="background-image: url('<%= request.getContextPath() + "/" + cat.getImagePath() %>');" data-catid="<%= cat.getId() %>" onclick="openCatModal(<%= cat.getId() %>)"></div>
+    <% } %>
   </div>
-  <div class="stat-card">
-    <div class="stat-number"><%= adoptedCount %></div>
-    <div class="stat-label">🏠 已领养</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-number"><%= availableCount %></div>
-    <div class="stat-label">💛 等待领养</div>
+  <button class="carousel-arrow left" onclick="prevSlide()">&#10094;</button>
+  <button class="carousel-arrow right" onclick="nextSlide()">&#10095;</button>
+  <div class="carousel-dots" id="carouselDots">
+    <% for (int i = 0; i < cats.size(); i++) { %>
+    <span class="carousel-dot <%= i == 0 ? "active" : "" %>" onclick="goToSlide(<%= i %>)"></span>
+    <% } %>
   </div>
 </div>
+<% } %>
 
 <!-- 搜索框 -->
 <div class="search-area">
@@ -472,7 +268,6 @@
       <span class="state-badge <%= "在校".equals(cat.getState()) ? "state-school" : "state-adopted" %>">
         <%= cat.getState() %>
       </span>
-      <!-- 收藏图标 -->
       <span class="fav-icon <%= favoriteCatIds.contains(cat.getId()) ? "favorited" : "" %>"
             id="fav-icon-<%= cat.getId() %>"
             onclick="event.stopPropagation(); toggleFavorite(<%= cat.getId() %>)"
@@ -480,21 +275,11 @@
         <%= favoriteCatIds.contains(cat.getId()) ? "★" : "☆" %>
       </span>
     </div>
-    <!-- 留言区 -->
-    <div class="comment-section" onclick="event.stopPropagation()">
-      <div class="comment-list" id="comments-<%= cat.getId() %>">
-        <!-- 留言将动态加载 -->
-      </div>
-      <div class="comment-input">
-        <input type="text" id="commentInput-<%= cat.getId() %>" placeholder="留下你的关心...">
-        <button onclick="addComment(<%= cat.getId() %>)">发送</button>
-      </div>
-    </div>
   </div>
   <% } %>
 </div>
 
-<!-- 猫咪详情模态框 -->
+<!-- 猫咪详情模态框（已移除留言板块） -->
 <div id="catModal" class="modal-overlay">
   <div class="modal-content">
     <span class="modal-close" onclick="closeModal()">&times;</span>
@@ -508,13 +293,8 @@
     <div class="modal-field"><strong>发现地点：</strong><span id="modalLocation"></span></div>
     <div class="modal-field"><strong>发现日期：</strong><span id="modalDate"></span></div>
 
-    <h4 style="margin-top:15px;">💬 大家对它的留言</h4>
-    <div class="modal-comments" id="modalCommentsList">加载中...</div>
-
-    <!-- 按钮区域 -->
     <div id="modalBtnArea"></div>
 
-    <!-- 领养申请表（默认隐藏） -->
     <div id="adoptFormArea" style="display:none;">
       <h4>📋 填写领养申请</h4>
       <label>您的姓名</label>
@@ -531,54 +311,25 @@
 </div>
 
 <script>
-  // 页面加载时，为每只猫咪加载留言
-  window.onload = function() {
-    var cards = document.querySelectorAll('.cat-card');
-    cards.forEach(function(card) {
-      var commentDiv = card.querySelector('.comment-list');
-      var id = commentDiv.id.split('-')[1];
-      loadComments(id);
-    });
-  };
+  // 轮播图逻辑
+  var currentSlide = 0;
+  var slides = document.querySelectorAll('.carousel-slide');
+  var dots = document.querySelectorAll('.carousel-dot');
+  var totalSlides = slides.length;
 
-  // 加载某只猫咪的留言
-  function loadComments(catId) {
-    fetch('<%= request.getContextPath() %>/getComments?catId=' + catId)
-            .then(response => response.json())
-            .then(data => {
-              var container = document.getElementById('comments-' + catId);
-              container.innerHTML = '';
-              if (data.length === 0) {
-                container.innerHTML = '<div style="color:#aaa; font-size:12px;">暂无留言，快来关爱它吧~</div>';
-              } else {
-                data.forEach(function(c) {
-                  container.innerHTML += '<div class="comment-item"><strong>' + c.username + ':</strong> ' + c.comment + '</div>';
-                });
-              }
-            })
-            .catch(err => console.error('加载留言失败', err));
+  function showSlide(index) {
+    if (index >= totalSlides) currentSlide = 0;
+    else if (index < 0) currentSlide = totalSlides - 1;
+    else currentSlide = index;
+    document.getElementById('carouselSlides').style.transform = 'translateX(-' + (currentSlide * 100) + '%)';
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === currentSlide));
   }
 
-  // 添加留言
-  function addComment(catId) {
-    var input = document.getElementById('commentInput-' + catId);
-    var text = input.value.trim();
-    if (!text) return;
-    fetch('<%= request.getContextPath() %>/addComment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: 'catId=' + catId + '&comment=' + encodeURIComponent(text)
-    })
-            .then(res => res.text())
-            .then(msg => {
-              if (msg === 'ok') {
-                input.value = '';
-                loadComments(catId);
-              } else {
-                alert('留言失败，请重试');
-              }
-            });
-  }
+  function nextSlide() { showSlide(currentSlide + 1); }
+  function prevSlide() { showSlide(currentSlide - 1); }
+  function goToSlide(index) { showSlide(index); }
+
+  if (totalSlides > 1) setInterval(nextSlide, 4000);
 
   // 搜索功能
   function searchCat() {
@@ -586,15 +337,11 @@
     var cards = document.querySelectorAll('.cat-card');
     cards.forEach(function(card) {
       var name = card.getAttribute('data-catname').toLowerCase();
-      if (name.indexOf(keyword) > -1) {
-        card.style.display = '';
-      } else {
-        card.style.display = 'none';
-      }
+      card.style.display = name.indexOf(keyword) > -1 ? '' : 'none';
     });
   }
 
-  // ===== 新增：猫咪详情模态框逻辑 =====
+  // 猫咪详情模态框逻辑
   var currentCatId = null;
   var currentCatState = null;
 
@@ -614,8 +361,6 @@
               document.getElementById('modalDate').innerText = cat.foundDate;
               currentCatState = cat.state;
 
-              loadModalComments(catId);
-
               var btnArea = document.getElementById('modalBtnArea');
               if (cat.state === '已领养') {
                 btnArea.innerHTML = '<button class="disabled-btn" disabled>🏠 已被领养</button>';
@@ -624,21 +369,7 @@
                 btnArea.innerHTML = '<button class="adopt-btn" onclick="showAdoptForm()">💌 申请领养</button>';
                 document.getElementById('adoptFormArea').style.display = 'none';
               }
-
               document.getElementById('catModal').style.display = 'flex';
-            });
-  }
-
-  function loadModalComments(catId) {
-    fetch('<%= request.getContextPath() %>/getComments?catId=' + catId)
-            .then(res => res.json())
-            .then(data => {
-              var container = document.getElementById('modalCommentsList');
-              if (data.length === 0) {
-                container.innerHTML = '<div style="color:#aaa;">暂无留言</div>';
-              } else {
-                container.innerHTML = data.map(c => '<div class="comment-item"><strong>' + c.username + '：</strong>' + c.comment + '</div>').join('');
-              }
             });
   }
 
@@ -682,7 +413,7 @@
             });
   }
 
-  // ===== 收藏功能 =====
+  // 收藏功能
   function toggleFavorite(catId) {
     fetch('<%= request.getContextPath() %>/toggleFavorite', {
       method: 'POST',
@@ -706,7 +437,7 @@
             });
   }
 
-  // ===== 退出登录功能 =====
+  // 退出登录
   function logout() {
     if (confirm('确定要退出登录吗？')) {
       window.location.href = '<%= request.getContextPath() %>/logout';
