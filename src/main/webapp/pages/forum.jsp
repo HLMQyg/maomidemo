@@ -35,9 +35,10 @@
         }
         body::before {
             content: "";
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
             background: url('../images/login-bg.jpg') center/cover no-repeat;
-            opacity: 0.06; z-index: -1; pointer-events: none;
+            opacity: 0.08; z-index: -1; pointer-events: none;
         }
 
         /* ========== Navbar ========== */

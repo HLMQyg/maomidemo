@@ -34,11 +34,12 @@ public class AdminDAO {
                 "(SELECT COUNT(*) FROM cats) AS totalCats, " +
                 "(SELECT COUNT(*) FROM cats WHERE state='在校') AS schoolCats, " +
                 "(SELECT COUNT(*) FROM cats WHERE state='已领养') AS adoptedCats, " +
+                "(SELECT COUNT(*) FROM cats WHERE state='喂养中') AS feedingCats, " +   // 新增
                 "(SELECT COUNT(*) FROM users) AS totalUsers, " +
                 "(SELECT COUNT(*) FROM adoptions WHERE status='待审核') AS pendingAdoptions, " +
                 "(SELECT COUNT(*) FROM adoptions WHERE status='已通过') AS approvedAdoptions, " +
                 "(SELECT COUNT(*) FROM adoptions WHERE status='已拒绝') AS rejectedAdoptions, " +
-                "(SELECT COUNT(*) FROM forum_comment) AS totalComments";
+                "(SELECT COUNT(*) FROM cat_comments) AS totalComments";
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -46,6 +47,7 @@ public class AdminDAO {
                 stats.put("totalCats", rs.getInt("totalCats"));
                 stats.put("schoolCats", rs.getInt("schoolCats"));
                 stats.put("adoptedCats", rs.getInt("adoptedCats"));
+                stats.put("feedingCats", rs.getInt("feedingCats"));   // 新增
                 stats.put("totalUsers", rs.getInt("totalUsers"));
                 stats.put("pendingAdoptions", rs.getInt("pendingAdoptions"));
                 stats.put("approvedAdoptions", rs.getInt("approvedAdoptions"));

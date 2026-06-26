@@ -244,9 +244,11 @@
         <a href="#" data-panel="forum">
             <span class="nav-icon">&#x1F4DD;</span> 论坛管理
         </a>
-        <!-- ===== 新增在线喂养菜单 ===== -->
         <a href="#" data-panel="feeding">
             <span class="nav-icon">&#x1F36C;</span> 在线喂养
+        </a>
+        <a href="#" data-panel="items">
+            <span class="nav-icon">&#x1F6D2;</span> 商品管理
         </a>
     </nav>
     <div class="sidebar-footer">
@@ -386,7 +388,6 @@
         </div>
     </div>
 
-    <!-- ===== 新增在线喂养面板 ===== -->
     <div id="panel-feeding" class="panel-wrap" style="display:none;">
         <div class="page-header">
             <h2>在线喂养管理</h2>
@@ -400,6 +401,27 @@
                     <tr><th>猫咪</th><th>喂养人</th><th>最近喂养时间</th><th>操作</th></tr>
                     </thead>
                     <tbody id="feedingTbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-items" class="panel-wrap" style="display:none;">
+        <div class="page-header">
+            <h2>商品管理</h2>
+            <div class="breadcrumb">首页 / 商品管理</div>
+        </div>
+        <div class="content-card">
+            <div class="card-toolbar">
+                <h3>商品列表</h3>
+                <button class="btn btn-primary" onclick="openItemForm()">+ 添加商品</button>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr><th>图片</th><th>名称</th><th>描述</th><th>价格</th><th>分类</th><th>状态</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="itemTbody"></tbody>
                 </table>
             </div>
         </div>
@@ -474,7 +496,6 @@
     </div>
 </div>
 
-<!-- 喂养完成处理模态框（支持图片上传） -->
 <div class="modal-overlay" id="feedingCompleteModal">
     <div class="modal-box">
         <button class="modal-close" onclick="closeFeedingComplete()">&times;</button>
@@ -494,7 +515,33 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="itemModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeItemForm()">&times;</button>
+        <h3 id="itemModalTitle">添加商品</h3>
+        <form id="itemForm" onsubmit="submitItem(event)">
+            <input type="hidden" id="itemId">
+            <input type="hidden" id="itemAction" value="add">
+            <div class="form-group"><label>名称</label><input type="text" id="itemName" required></div>
+            <div class="form-group"><label>描述</label><textarea id="itemDesc" rows="2"></textarea></div>
+            <div class="form-group"><label>价格</label><input type="number" step="0.01" id="itemPrice" required></div>
+            <div class="form-group"><label>图片路径</label><input type="text" id="itemImagePath" placeholder="例: images/items/cat_food.jpg"></div>
+            <div class="form-group"><label>分类</label>
+                <select id="itemCategory">
+                    <option>猫粮</option>
+                    <option>猫罐头</option>
+                    <option>猫零食</option>
+                    <option>营养品</option>
+                    <option>猫玩具</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">保存</button>
+        </form>
+    </div>
+</div>
+
 <div class="toast" id="toast"></div>
+
 <script>
     var ctx = '<%= request.getContextPath() %>';
 
@@ -513,7 +560,8 @@
             else if (panel === 'users') { loadUsers(); }
             else if (panel === 'comments') { loadComments(); }
             else if (panel === 'forum') { loadForumData(); }
-            else if (panel === 'feeding') { loadFeedingList(); }   // ← 新增喂养面板加载
+            else if (panel === 'feeding') { loadFeedingList(); }
+            else if (panel === 'items') { loadItems(); }
         };
     });
 
@@ -534,6 +582,7 @@
                     { n: d.totalCats||0,     t: '猫咪总数',   c: 'orange', e: '\u{1F431}' },
                     { n: d.schoolCats||0,    t: '在校猫咪',   c: 'green',  e: '\u{1F3EB}' },
                     { n: d.adoptedCats||0,   t: '已领养',     c: 'blue',   e: '\u{1F3E0}' },
+                    { n: d.feedingCats||0,   t: '喂养中',     c: 'orange', e: '\u{1F36C}' },  // 新增
                     { n: d.totalUsers||0,    t: '用户总数',   c: 'purple', e: '\u{1F464}' },
                     { n: d.pendingAdoptions||0, t: '待审核申请', c: 'orange', e: '\u{23F3}' },
                     { n: d.approvedAdoptions||0, t: '已通过',  c: 'green',  e: '\u{2705}' },
@@ -780,7 +829,6 @@
         }
     }
 
-
     var _forumThreads = [];
     var _reports = [];
     function loadForumData() {
@@ -852,7 +900,7 @@
             .then(function(r){return r.text()}).then(function(m){if(m==='ok'){toast('发帖成功');closeAdminPostForm();loadForumData();document.getElementById('adminPostTitle').value='';document.getElementById('adminPostContent').value=''}else toast(m,'err')});
     }
 
-    /* ===== 新增在线喂养相关函数 ===== */
+    /* ========== 在线喂养管理 ========== */
     function loadFeedingList() {
         fetch(ctx + '/adminFeeding?action=list')
             .then(r => r.json())
@@ -878,18 +926,15 @@
                 tbody.innerHTML = html;
             });
     }
-
     function openFeedingComplete(catId, feeder) {
         document.getElementById('completeCatId').value = catId;
         document.getElementById('completeFeeder').value = feeder;
         document.getElementById('completeMessage').value = '';
         document.getElementById('feedingCompleteModal').classList.add('show');
     }
-
     function closeFeedingComplete() {
         document.getElementById('feedingCompleteModal').classList.remove('show');
     }
-
     function submitFeedingComplete() {
         var catId = document.getElementById('completeCatId').value;
         var feeder = document.getElementById('completeFeeder').value;
@@ -918,38 +963,104 @@
                 toast(msg, 'err');
             }
         });
-    }function submitFeedingComplete() {
-        var catId = document.getElementById('completeCatId').value;
-        var feeder = document.getElementById('completeFeeder').value;
-        var message = document.getElementById('completeMessage').value;
-        var imageFile = document.getElementById('completeImage').files[0];
+    }
 
-        var formData = new FormData();
-        formData.append('action', 'complete');
-        formData.append('catId', catId);
-        formData.append('feeder', feeder);
-        formData.append('message', message);
-        if (imageFile) {
-            formData.append('image', imageFile);
+    /* ========== 商品管理 ========== */
+    var _items = [];
+    function loadItems() {
+        fetch(ctx + '/adminItem')
+            .then(r => r.json())
+            .then(d => { _items = d; renderItemTable(); })
+            .catch(() => { document.getElementById('itemTbody').innerHTML = '<tr class="empty-row"><td colspan="7">加载失败</td></tr>'; });
+    }
+    function renderItemTable() {
+        var h = '';
+        if (_items.length === 0) {
+            h = '<tr class="empty-row"><td colspan="7">暂无商品</td></tr>';
+        } else {
+            _items.forEach(function(item) {
+                var img = item.imagePath ? (ctx + '/' + item.imagePath) : '';
+                var statusTag = item.status === '上架' ? '<span class="tag tag-ok">上架</span>' : '<span class="tag tag-no">下架</span>';
+                var toggleBtn = item.status === '上架'
+                    ? '<button class="btn btn-sm btn-danger" onclick="toggleItem('+item.id+',\'下架\')">下架</button>'
+                    : '<button class="btn btn-sm btn-success" onclick="toggleItem('+item.id+',\'上架\')">上架</button>';
+                h += '<tr>' +
+                    '<td>' + (img ? '<img src="' + img + '" style="width:36px;height:36px;border-radius:6px;object-fit:cover;">' : '') + '</td>' +
+                    '<td>' + item.name + '</td>' +
+                    '<td>' + (item.description ? item.description.substring(0,20) : '') + '</td>' +
+                    '<td>¥' + item.price.toFixed(2) + '</td>' +
+                    '<td>' + item.category + '</td>' +
+                    '<td>' + statusTag + '</td>' +
+                    '<td class="cell-actions">' +
+                    '<button class="btn btn-outline btn-sm" onclick="editItem(' + item.id + ')">编辑</button>' +
+                    toggleBtn +
+                    '<button class="btn btn-danger btn-sm" onclick="deleteItem(' + item.id + ')">删除</button>' +
+                    '</td></tr>';
+            });
         }
+        document.getElementById('itemTbody').innerHTML = h;
+    }
+    function openItemForm() {
+        document.getElementById('itemModalTitle').textContent = '添加商品';
+        document.getElementById('itemAction').value = 'add';
+        document.getElementById('itemId').value = '';
+        document.getElementById('itemForm').reset();
+        document.getElementById('itemModal').classList.add('show');
+    }
+    function editItem(id) {
+        var item = _items.find(function(x) { return x.id === id; });
+        if (!item) return;
+        document.getElementById('itemModalTitle').textContent = '编辑商品';
+        document.getElementById('itemAction').value = 'update';
+        document.getElementById('itemId').value = item.id;
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemDesc').value = item.description || '';
+        document.getElementById('itemPrice').value = item.price;
+        document.getElementById('itemImagePath').value = item.imagePath || '';
+        document.getElementById('itemCategory').value = item.category;
+        document.getElementById('itemModal').classList.add('show');
+    }
+    function closeItemForm() { document.getElementById('itemModal').classList.remove('show'); }
+    function submitItem(e) {
+        e.preventDefault();
+        var id = document.getElementById('itemId').value;
+        var action = document.getElementById('itemAction').value;
+        var name = document.getElementById('itemName').value;
+        var desc = document.getElementById('itemDesc').value;
+        var price = document.getElementById('itemPrice').value;
+        var img = document.getElementById('itemImagePath').value;
+        var cat = document.getElementById('itemCategory').value;
 
-        fetch(ctx + '/adminFeeding', {
-            method: 'POST',
-            body: formData
-        }).then(r => r.text()).then(msg => {
-            if (msg === 'ok') {
-                toast('喂养已完成并回复');
-                closeFeedingComplete();
-                loadFeedingList();
-                loadOverview();
-            } else {
-                toast(msg, 'err');
-            }
-        });
+        var body = 'action=' + action + '&name=' + encodeURIComponent(name) + '&description=' + encodeURIComponent(desc) +
+            '&price=' + price + '&imagePath=' + encodeURIComponent(img) + '&category=' + encodeURIComponent(cat);
+        if (action === 'update') body += '&id=' + id;
+
+        fetch(ctx + '/adminItem', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: body })
+            .then(r => r.text())
+            .then(msg => {
+                if (msg === 'ok') { toast('操作成功'); closeItemForm(); loadItems(); }
+                else toast(msg, 'err');
+            });
+    }
+    function toggleItem(id, status) {
+        fetch(ctx + '/adminItem', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=toggle&id=' + id + '&status=' + status })
+            .then(r => r.text())
+            .then(msg => {
+                if (msg === 'ok') { toast('状态已更新'); loadItems(); }
+                else toast(msg, 'err');
+            });
+    }
+    function deleteItem(id) {
+        if (!confirm('确定删除该商品吗？')) return;
+        fetch(ctx + '/adminItem', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id=' + id })
+            .then(r => r.text())
+            .then(msg => {
+                if (msg === 'ok') { toast('已删除'); loadItems(); }
+                else toast(msg, 'err');
+            });
     }
 
     loadOverview();
-
 </script>
 </body>
 </html>
