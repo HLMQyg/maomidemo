@@ -47,8 +47,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
+            flex-shrink: 0;
             z-index: 100;
         }
         .nav-logo { font-size: 22px; font-weight: 700; color: #b87c2c; letter-spacing: 1px; }
@@ -66,7 +65,7 @@
         }
         .logout-btn:hover { background: #e6a14c; color: white; }
 
-        .main-container { display: flex; flex: 1; overflow: hidden; }
+        .main-container { display: flex; flex: 1; overflow: hidden; min-height: 0; }
         .sidebar {
             width: 260px; background: #fefaf5; padding: 20px 15px;
             box-shadow: 2px 0 10px rgba(0,0,0,0.05);
@@ -203,7 +202,7 @@
             <img class="sidebar-avatar"
                  src="<%= request.getContextPath() %>/avatar?name=<%= sessionUser.getProfileImage() != null ? sessionUser.getProfileImage() : "default.png" %>"
                  alt="头像"
-                 onerror="this.src='images/default_avatar.png'">
+                 onerror="this.src='<%= request.getContextPath() %>/uploads/avatars/default.png'">
             <div class="sidebar-username">
                 <%= sessionUser.getUsername() %>
                 <span id="msgBadge" class="msg-badge">0</span>
@@ -276,9 +275,9 @@
             .then(res => res.json())
             .then(data => {
                 var container = document.getElementById('inventoryList');
-                container.innerHTML = '';
+                var html = '';
                 data.forEach(item => {
-                    container.innerHTML +=
+                    html +=
                         '<div class="inventory-item" draggable="true" ondragstart="dragStart(event)" data-itemid="' + item.itemId + '">' +
                         '<img src="<%= request.getContextPath() %>/' + item.image + '" onerror="this.src=\'images/default_item.png\'">' +
                         '<div class="info">' +
@@ -287,6 +286,7 @@
                         '</div>' +
                         '</div>';
                 });
+                container.innerHTML = html;
             });
     }
 

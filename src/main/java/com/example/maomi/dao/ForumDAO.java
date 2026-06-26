@@ -159,20 +159,51 @@ public class ForumDAO {
 
     /** 添加评论（支持回复） */
     public boolean addComment(int threadId, String userId, String content, Integer parentId) {
-        String sql = parentId != null
-            ? "INSERT INTO forum_comment (thread_id, user_id, content, parent_id) VALUES (?,?,?,?)"
-            : "INSERT INTO forum_comment (thread_id, user_id, content) VALUES (?,?,?)";
+        if (parentId != null) {
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(
+                     "INSERT INTO forum_comment (thread_id, user_id, content, parent_id) VALUES (?,?,?,?)")) {
+                stmt.setInt(1, threadId);
+                stmt.setString(2, userId);
+                stmt.setString(3, content);
+                stmt.setInt(4, parentId);
+                boolean ok = stmt.executeUpdate() > 0;
+                if (ok) updateCommentCount(threadId);
+                return ok;
+            } catch (SQLException e) {
+                ensureParentIdColumn();
+                // Retry once after adding column
+                try (Connection conn = DBUtil.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(
+                         "INSERT INTO forum_comment (thread_id, user_id, content, parent_id) VALUES (?,?,?,?)")) {
+                    stmt.setInt(1, threadId);
+                    stmt.setString(2, userId);
+                    stmt.setString(3, content);
+                    stmt.setInt(4, parentId);
+                    boolean ok = stmt.executeUpdate() > 0;
+                    if (ok) updateCommentCount(threadId);
+                    return ok;
+                } catch (SQLException e2) { }
+            }
+        }
+        String sql = "INSERT INTO forum_comment (thread_id, user_id, content) VALUES (?,?,?)";
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, threadId);
             stmt.setString(2, userId);
             stmt.setString(3, content);
-            if (parentId != null) stmt.setInt(4, parentId);
             boolean ok = stmt.executeUpdate() > 0;
             if (ok) updateCommentCount(threadId);
             return ok;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
+    }
+
+    private void ensureParentIdColumn() {
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE forum_comment ADD COLUMN parent_id INT NULL");
+        } catch (SQLException ignored) { }
     }
 
     /** 获取帖子评论（带嵌套回复和点赞数） */
@@ -196,9 +227,38 @@ public class ForumDAO {
                 c.setUserId(rs.getString("user_id"));
                 c.setContent(rs.getString("content"));
                 c.setCreatedAt(rs.getTimestamp("created_at"));
-                int pid = rs.getInt("parent_id");
-                c.setParentId(rs.wasNull() ? null : pid);
-                c.setLikeCount(rs.getInt("like_count"));
+                try { int pid = rs.getInt("parent_id"); c.setParentId(rs.wasNull() ? null : pid); }
+                catch (SQLException e) { c.setParentId(null); }
+                try { c.setLikeCount(rs.getInt("like_count")); }
+                catch (SQLException e) { c.setLikeCount(0); }
+                all.add(c);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return getCommentsBasic(threadId, sort);
+        }
+        return buildCommentTree(all);
+    }
+
+    private List<ForumComment> getCommentsBasic(int threadId, String sort) {
+        List<ForumComment> all = new ArrayList<>();
+        String order = "hot".equals(sort) ? "created_at DESC" : "created_at ASC";
+        String sql = "SELECT * FROM forum_comment WHERE thread_id = ? ORDER BY " + order;
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, threadId);
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                ForumComment c = new ForumComment();
+                c.setId(rs.getInt("id"));
+                c.setThreadId(rs.getInt("thread_id"));
+                c.setUserId(rs.getString("user_id"));
+                c.setContent(rs.getString("content"));
+                c.setCreatedAt(rs.getTimestamp("created_at"));
+                try { int pid = rs.getInt("parent_id"); c.setParentId(rs.wasNull() ? null : pid); }
+                catch (SQLException e) { c.setParentId(null); }
+                try { c.setLikeCount(rs.getInt("like_count")); }
+                catch (SQLException e) { c.setLikeCount(0); }
                 all.add(c);
             }
         } catch (SQLException e) { e.printStackTrace(); }
@@ -242,6 +302,7 @@ public class ForumDAO {
 
     public int toggleCommentLike(int commentId, String userId) {
         try (Connection conn = DBUtil.getConnection()) {
+            ensureCommentLikeTable();
             String checkSql = "SELECT id FROM forum_comment_like WHERE comment_id = ? AND user_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkSql)) {
                 stmt.setInt(1, commentId);
@@ -379,7 +440,16 @@ public class ForumDAO {
 
     // ==================== 工具 ====================
 
-    private ForumThread mapThread(ResultSet rs) throws SQLException {
+
+    private void ensureCommentLikeTable() {
+        try (Connection conn = DBUtil.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE IF NOT EXISTS forum_comment_like (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "comment_id INT NOT NULL, " +
+                "user_id VARCHAR(100) NOT NULL)");
+        } catch (SQLException ignored) { }
+    }    private ForumThread mapThread(ResultSet rs) throws SQLException {
         ForumThread t = new ForumThread();
         t.setId(rs.getInt("id"));
         t.setTitle(rs.getString("title"));

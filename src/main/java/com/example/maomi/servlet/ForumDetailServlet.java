@@ -65,7 +65,14 @@ public class ForumDetailServlet extends HttpServlet {
             }
 
             out.print("<div class=\"detail-stats\">");
-            out.print("<span>&#x1f44d; <span id=\"detailLikeCount\">" + thread.getLikeCount() + "</span></span>");
+            if (currentUser != null) {
+                out.print("<button class=\"post-action\" style=\"border:none;background:none;cursor:pointer;font-size:14px;color:#999;padding:4px 8px;display:flex;align-items:center;gap:5px;font-family:inherit;\" onclick=\"toggleDetailLike(" + id + ")\" id=\"detailLikeBtn\">");
+                out.print("<svg viewBox=\"0 0 24 24\" fill=\"" + (liked ? "#e6a14c" : "none") + "\" stroke=\"currentColor\" stroke-width=\"2\" width=\"18\" height=\"18\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z\"/></svg>");
+                out.print("<span id=\"detailLikeCount\">" + thread.getLikeCount() + "</span>");
+                out.print("</button>");
+            } else {
+                out.print("<span style=\"display:flex;align-items:center;gap:5px;font-size:14px;color:#999;\">&#x1f44d; <span id=\"detailLikeCount\">" + thread.getLikeCount() + "</span></span>");
+            }
             out.print("<span>&#x1f4ac; " + thread.getCommentCount() + "</span>");
             out.print("<span>&#x1f441; " + thread.getViewCount() + "</span>");
             if (thread.getCategory() != null && !thread.getCategory().isEmpty()) {

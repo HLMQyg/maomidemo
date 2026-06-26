@@ -592,12 +592,15 @@
 
     function loadDetail(id, commentSort) {
         currentCommentSort = commentSort || 'latest';
+        var dv = document.getElementById('detailView');
+        var scrollTop = dv ? dv.scrollTop : 0;
         document.getElementById('detailContent').innerHTML = '<div style="text-align:center;padding:40px;color:#ccc;">加载中...</div>';
         fetch(ctx + '/forumDetail?id=' + id + '&ajax=1&commentSort=' + currentCommentSort)
             .then(function(r) { return r.text(); })
             .then(function(html) {
                 document.getElementById('detailContent').innerHTML = html;
                 detailLoaded();
+                if (dv) dv.scrollTop = scrollTop;
             })
             .catch(function() {
                 document.getElementById('detailContent').innerHTML = '<div style="text-align:center;padding:40px;color:#e6a14c;">加载失败</div>';
@@ -645,6 +648,27 @@
                   svg.setAttribute('fill', svg.getAttribute('fill') === 'none' ? '#e6a14c' : 'none');
               }
           });
+    }
+
+    // ========== Like Post (Detail) ==========
+    function toggleDetailLike(threadId) {
+        var btn = document.getElementById("detailLikeBtn");
+        if (!btn) return;
+        btn.disabled = true;
+        fetch(ctx + "/forumLike", {
+            method: "POST",
+            headers: {"Content-Type":"application/x-www-form-urlencoded"},
+            body: "threadId=" + threadId
+        }).then(function(r) { return r.json(); })
+          .then(function(d) {
+              var sp = document.getElementById("detailLikeCount");
+              if (sp) sp.textContent = d.count;
+              var svg = btn.querySelector("svg");
+              if (svg) {
+                  svg.setAttribute("fill", svg.getAttribute("fill") === "none" ? "#e6a14c" : "none");
+              }
+              btn.disabled = false;
+          }).catch(function() { btn.disabled = false; });
     }
 
     // ========== Comment ==========

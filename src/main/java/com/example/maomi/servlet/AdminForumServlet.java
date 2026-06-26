@@ -2,6 +2,7 @@ package com.example.maomi.servlet;
 
 import com.example.maomi.dao.ForumDAO;
 import com.example.maomi.model.ForumReport;
+import com.example.maomi.model.ForumComment;
 import com.example.maomi.model.ForumThread;
 import com.example.maomi.utils.JsonUtil;
 import javax.servlet.annotation.WebServlet;
@@ -25,6 +26,28 @@ public class AdminForumServlet extends HttpServlet {
         if ("reports".equals(type)) {
             List<ForumReport> reports = dao.getAllReports();
             response.getWriter().write(JsonUtil.toJson(reports));
+        } else if ("detail".equals(type)) {
+            int id = Integer.parseInt(request.getParameter("id"));
+            ForumThread thread = dao.getThreadById(id);
+            if (thread == null) { response.sendError(404); return; }
+            List<ForumComment> comments = dao.getCommentsWithReplies(id, "latest");
+            StringBuilder json = new StringBuilder("{");
+            json.append("\"id\":").append(thread.getId()).append(",");
+            json.append("\"title\":\"").append(escapeJson(thread.getTitle())).append("\",");
+            json.append("\"content\":\"").append(escapeJson(thread.getContent())).append("\",");
+            json.append("\"userId\":\"").append(escapeJson(thread.getUserId())).append("\",");
+            json.append("\"category\":\"").append(escapeJson(thread.getCategory())).append("\",");
+            json.append("\"imagePath\":\"").append(escapeJson(thread.getImagePath())).append("\",");
+            json.append("\"likeCount\":").append(thread.getLikeCount()).append(",");
+            json.append("\"commentCount\":").append(thread.getCommentCount()).append(",");
+            json.append("\"viewCount\":").append(thread.getViewCount()).append(",");
+            json.append("\"createdAt\":\"").append(thread.getCreatedAt() != null ? thread.getCreatedAt().toString() : "").append("\",");
+            json.append("\"catName\":\"").append(escapeJson(thread.getCatName())).append("\",");
+            json.append("\"comments\":[");
+            appendCommentsJson(json, comments);
+            json.append("]");
+            json.append("}");
+            response.getWriter().write(json.toString());
         } else {
             List<ForumThread> threads = dao.getAllThreadsForAdmin();
             response.getWriter().write(JsonUtil.toJson(threads));
@@ -86,4 +109,28 @@ public class AdminForumServlet extends HttpServlet {
             response.getWriter().write("参数错误");
         }
     }
-}
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+    }
+
+    private void appendCommentsJson(StringBuilder sb, List<ForumComment> comments) {
+        boolean first = true;
+        for (ForumComment c : comments) {
+            if (!first) sb.append(",");
+            first = false;
+            sb.append("{");
+            sb.append("\"id\":").append(c.getId()).append(",");
+            sb.append("\"userId\":\"").append(escapeJson(c.getUserId())).append("\",");
+            sb.append("\"content\":\"").append(escapeJson(c.getContent())).append("\",");
+            sb.append("\"createdAt\":\"").append(c.getCreatedAt() != null ? c.getCreatedAt().toString() : "").append("\",");
+            sb.append("\"likeCount\":").append(c.getLikeCount()).append(",");
+            sb.append("\"replies\":[");
+            if (c.getReplies() != null && !c.getReplies().isEmpty()) {
+                appendCommentsJson(sb, c.getReplies());
+            }
+            sb.append("]");
+            sb.append("}");
+        }
+    }}

@@ -1,7 +1,6 @@
 package com.example.maomi.dao;
 
 import com.example.maomi.model.Adoption;
-import com.example.maomi.model.Comment;
 import com.example.maomi.model.FeedingMessage;
 import com.example.maomi.model.User;
 import com.example.maomi.utils.DBUtil;
@@ -39,7 +38,7 @@ public class AdminDAO {
                 "(SELECT COUNT(*) FROM adoptions WHERE status='待审核') AS pendingAdoptions, " +
                 "(SELECT COUNT(*) FROM adoptions WHERE status='已通过') AS approvedAdoptions, " +
                 "(SELECT COUNT(*) FROM adoptions WHERE status='已拒绝') AS rejectedAdoptions, " +
-                "(SELECT COUNT(*) FROM cat_comments) AS totalComments";
+                "(SELECT COUNT(*) FROM forum_comment) AS totalComments";
         try (Connection conn = DBUtil.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -122,7 +121,6 @@ public class AdminDAO {
                 // 删除用户相关的收藏、评论、领养消息、领养申请
                 String[] sqls = {
                     "DELETE FROM user_favorites WHERE username=?",
-                    "DELETE FROM cat_comments WHERE username=?",
                     "DELETE FROM adoption_messages WHERE sender=?",
                     "DELETE FROM adoption_messages WHERE adoption_id IN (SELECT id FROM adoptions WHERE username=?)",
                     "DELETE FROM adoptions WHERE username=?",
@@ -148,40 +146,7 @@ public class AdminDAO {
         return false;
     }
 
-    /** 获取所有评论 */
-    public List<Comment> getAllComments() {
-        List<Comment> list = new ArrayList<>();
-        String sql = "SELECT id, cat_id, username, comment, comment_time FROM cat_comments ORDER BY comment_time DESC";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                Comment c = new Comment();
-                c.setId(rs.getInt("id"));
-                c.setCatId(rs.getInt("cat_id"));
-                c.setUsername(rs.getString("username"));
-                c.setComment(rs.getString("comment"));
-                c.setCommentTime(rs.getTimestamp("comment_time"));
-                list.add(c);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return list;
-    }
 
-    /** 删除评论 */
-    public boolean deleteComment(int id) {
-        String sql = "DELETE FROM cat_comments WHERE id=?";
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            return stmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
 
     /** 更新猫咪信息 */
     public boolean updateCat(int id, String name, String color, int age, String gender,
@@ -208,7 +173,41 @@ public class AdminDAO {
         return false;
     }
 
-    private Adoption mapAdoption(ResultSet rs) throws SQLException {
+
+    /** 获取所有论坛评论（关联帖子标题） */
+    public List<Map<String, Object>> getForumCommentsForAdmin() {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT fc.*, ft.title AS thread_title, ft.user_id AS thread_author " +
+                     "FROM forum_comment fc JOIN forum_thread ft ON fc.thread_id = ft.id " +
+                     "ORDER BY fc.created_at DESC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("id", rs.getInt("id"));
+                row.put("threadId", rs.getInt("thread_id"));
+                row.put("threadTitle", rs.getString("thread_title"));
+                row.put("threadAuthor", rs.getString("thread_author"));
+                row.put("userId", rs.getString("user_id"));
+                row.put("content", rs.getString("content"));
+                row.put("createdAt", rs.getTimestamp("created_at"));
+                list.add(row);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    /** 删除论坛评论 */
+    public boolean deleteForumComment(int id) {
+        String sql = "DELETE FROM forum_comment WHERE id=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }    private Adoption mapAdoption(ResultSet rs) throws SQLException {
         Adoption ad = new Adoption();
         ad.setId(rs.getInt("id"));
         ad.setUsername(rs.getString("username"));
