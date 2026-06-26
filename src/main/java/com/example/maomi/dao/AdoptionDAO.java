@@ -104,4 +104,15 @@ public class AdoptionDAO {
         ad.setCancelTime(rs.getTimestamp("cancel_time"));
         return ad;
     }
+
+    // 取消领养申请（仅限待审核状态的申请）
+    public boolean cancelAdoption(int id) {
+        String sql = "UPDATE adoptions SET status='已取消', cancel_time=NOW() WHERE id=? AND status='待审核'";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); }
+        return false;
+    }
 }

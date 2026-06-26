@@ -1,4 +1,3 @@
-
 <%@ page import="com.example.maomi.model.User" %>
 <%@ page import="com.example.maomi.model.Adoption" %>
 <%@ page import="java.util.List" %>
@@ -85,29 +84,35 @@
             padding: 10px 20px; font-weight: 700; cursor: pointer; transition: 0.3s;
         }
         .btn:hover { background: #c97d2a; }
+        .cancel-btn {
+            background: #f8d7da; color: #721c24; border: none; border-radius: 12px;
+            padding: 8px 16px; font-weight: 700; cursor: pointer; transition: 0.3s;
+            margin-left: 10px;
+        }
+        .cancel-btn:hover { background: #f5c6cb; }
     </style>
 </head>
 <body>
 <nav class="navbar">
-    <div class="nav-logo">校园流浪猫</div>
+    <div class="nav-logo">🐾 校园流浪猫</div>
     <div class="nav-links">
-        <a href="<%= request.getContextPath() %>/pages/home.jsp">首页</a>
-        <a href="<%= request.getContextPath() %>/myAdoptions">我的领养</a>
-        <a href="<%= request.getContextPath() %>/forumList">论坛</a>
-        <a href="<%= request.getContextPath() %>/knowledgeList">知识科普</a>
-        <a href="<%= request.getContextPath() %>/pages/feeding.jsp">在线喂养</a>
-        <a href="<%= request.getContextPath() %>/pages/user_center.jsp">个人中心</a>
+        <a href="<%= request.getContextPath() %>/pages/home.jsp">🏠 首页</a>
+        <a href="<%= request.getContextPath() %>/myAdoptions">📋 我的领养</a>
+        <a href="<%= request.getContextPath() %>/forumList">💬 论坛</a>
+        <a href="<%= request.getContextPath() %>/knowledgeList">📖 知识科普</a>
+        <a href="<%= request.getContextPath() %>/pages/feeding.jsp">🍼 在线喂养</a>
+        <a href="<%= request.getContextPath() %>/pages/user_center.jsp">👤 个人中心</a>
     </div>
     <div class="user-badge">
-        <%= sessionUser.getUsername() %>
+        🐱 <%= sessionUser.getUsername() %>
         <button class="logout-btn" onclick="logout()">退出登录</button>
     </div>
 </nav>
 
 <div class="container">
-    <h2>我的领养申请</h2>
+    <h2>📋 我的领养申请</h2>
     <% if (adoptions == null || adoptions.isEmpty()) { %>
-    <div class="card" style="text-align:center; color:#a68a64;">暂无领养申请，去首页看看猫咪吧</div>
+    <div class="card" style="text-align:center; color:#a68a64;">暂无领养申请，去首页看看猫咪吧~</div>
     <% } else {
         for (Adoption ad : adoptions) {
             String status = ad.getStatus();
@@ -117,7 +122,7 @@
             else if ("已取消".equals(status)) badgeClass = "status-cancelled";
     %>
     <div class="adopt-item">
-        <h3>猫咪：<%= ad.getCatName() %></h3>
+        <h3>🐱 猫咪：<%= ad.getCatName() %></h3>
         <p>申请人：<%= ad.getApplicantName() %> | 电话：<%= ad.getApplicantPhone() %> | 地址：<%= ad.getApplicantAddress() %></p>
         <p>申请理由：<%= ad.getReason() %></p>
         <p>状态：<span class="status-badge <%= badgeClass %>"><%= status %></span></p>
@@ -125,12 +130,34 @@
         <p><strong>审核意见：</strong><%= ad.getReviewNotes() %></p>
         <% } %>
         <p style="font-size:12px; color:#aaa;">申请时间：<%= ad.getApplyDate() != null ? ad.getApplyDate().toString().substring(0, 19) : "" %></p>
+        <%-- 仅当状态为“待审核”时显示取消按钮 --%>
+        <% if ("待审核".equals(status)) { %>
+        <button class="cancel-btn" onclick="cancelAdoption(<%= ad.getId() %>)">取消申请</button>
+        <% } %>
     </div>
     <%  }
     } %>
 </div>
 
 <script>
+    function cancelAdoption(id) {
+        if (!confirm('确定要取消该领养申请吗？')) return;
+        fetch('<%= request.getContextPath() %>/cancelAdoption', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'id=' + id
+        })
+            .then(res => res.text())
+            .then(msg => {
+                if (msg === 'ok') {
+                    alert('申请已取消');
+                    location.reload();  // 刷新页面显示最新状态
+                } else {
+                    alert('取消失败：' + msg);
+                }
+            });
+    }
+
     function logout() {
         if (confirm('确定要退出登录吗？')) {
             window.location.href = '<%= request.getContextPath() %>/logout';

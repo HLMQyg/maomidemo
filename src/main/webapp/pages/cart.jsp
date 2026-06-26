@@ -4,6 +4,8 @@
 <%@ page import="com.example.maomi.model.CartItem" %>
 <%@ page import="com.example.maomi.model.Item" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="java.util.Map" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <%
   User sessionUser = (User) session.getAttribute("user");
@@ -12,13 +14,28 @@
     return;
   }
   ItemDAO itemDAO = new ItemDAO();
-  List<Item> items = itemDAO.getAllItems();
+  List<Item> items = itemDAO.getAllItems();   // 已过滤上架商品
   CartDAO cartDAO = new CartDAO();
   List<CartItem> cartItems = cartDAO.getByUsername(sessionUser.getUsername());
   double total = 0;
   for (CartItem item : cartItems) {
     total += item.getQuantity() * item.getItemPrice();
   }
+
+  // 将数据库中的细分类合并为5个大类
+  Map<String, String> categoryMap = new HashMap<>();
+  categoryMap.put("猫粮", "猫粮");
+  categoryMap.put("猫罐头", "猫罐头");
+  categoryMap.put("猫条", "猫零食");
+  categoryMap.put("冻干零食", "猫零食");
+  categoryMap.put("猫饼干", "猫零食");
+  categoryMap.put("磨牙零食", "猫零食");
+  categoryMap.put("功能性零食", "猫零食");
+  categoryMap.put("猫草", "猫零食");
+  categoryMap.put("宠物奶", "营养品");
+  categoryMap.put("营养膏", "营养品");
+  categoryMap.put("猫玩具", "猫玩具");
+  categoryMap.put("湿粮包", "猫零食");  // 湿粮包归入猫零食
 %>
 <!DOCTYPE html>
 <html>
@@ -60,6 +77,34 @@
     .section-title {
       color: #6f4518; margin: 25px 0 15px; font-size: 22px;
       border-bottom: 2px solid #f0d9b5; padding-bottom: 8px;
+    }
+    .search-category {
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px;
+    }
+    .search-box {
+      display: flex; gap: 10px;
+    }
+    .search-box input {
+      flex: 1; padding: 10px 16px; border: 1.5px solid #f0d9b5;
+      border-radius: 25px; background: white; font-size: 15px; outline: none;
+      transition: 0.3s;
+    }
+    .search-box input:focus { border-color: #e6a14c; box-shadow: 0 0 0 3px rgba(230,161,76,0.12); }
+    .search-box button {
+      background: #e6a14c; color: white; border: none; border-radius: 25px;
+      padding: 10px 25px; font-weight: 700; cursor: pointer; transition: 0.3s;
+    }
+    .search-box button:hover { background: #c97d2a; }
+    .category-tabs {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .category-tab {
+      background: white; border: 1px solid #f0d9b5; border-radius: 20px;
+      padding: 6px 18px; font-size: 13px; color: #b3904f; cursor: pointer;
+      transition: 0.2s; font-weight: 600; white-space: nowrap;
+    }
+    .category-tab.active, .category-tab:hover {
+      background: #e6a14c; color: white; border-color: #e6a14c;
     }
     .product-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -116,9 +161,29 @@
 
 <div class="container">
   <h2 class="section-title">🎁 猫咪零食铺</h2>
-  <div class="product-grid">
-    <% for (Item item : items) { %>
-    <div class="product-card">
+
+  <div class="search-category">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="搜索商品名称..." oninput="filterProducts()">
+      <button onclick="document.getElementById('searchInput').value='';filterProducts();">清除</button>
+    </div>
+    <div class="category-tabs" id="categoryTabs">
+      <!-- 固定5个大类 + 全部 -->
+      <span class="category-tab active" onclick="filterProducts('全部')">全部</span>
+      <span class="category-tab" onclick="filterProducts('猫粮')">猫粮</span>
+      <span class="category-tab" onclick="filterProducts('猫罐头')">猫罐头</span>
+      <span class="category-tab" onclick="filterProducts('猫零食')">猫零食</span>
+      <span class="category-tab" onclick="filterProducts('营养品')">营养品</span>
+      <span class="category-tab" onclick="filterProducts('猫玩具')">猫玩具</span>
+    </div>
+  </div>
+
+  <div class="product-grid" id="productGrid">
+    <% for (Item item : items) {
+      // 获取映射后的大类，未映射的默认归入“猫零食”
+      String mappedCategory = categoryMap.getOrDefault(item.getCategory(), "猫零食");
+    %>
+    <div class="product-card" data-category="<%= mappedCategory %>" data-name="<%= item.getName() %>">
       <img src="<%= request.getContextPath() + "/" + (item.getImagePath() != null ? item.getImagePath() : "images/items/default.jpg") %>" alt="<%= item.getName() %>">
       <div class="product-name"><%= item.getName() %></div>
       <div class="product-price">¥<%= String.format("%.2f", item.getPrice()) %></div>
@@ -153,6 +218,7 @@
 </div>
 
 <script>
+  // 原有购物车函数
   function addToCart(itemId) {
     fetch('<%= request.getContextPath() %>/addToCart', {
       method: 'POST',
@@ -195,6 +261,37 @@
   function logout() {
     if (confirm('确定退出登录？')) location.href = '<%= request.getContextPath() %>/logout';
   }
+
+  // 当前选中的分类（默认为“全部”）
+  var currentCategory = '全部';
+
+  // 筛选函数
+  function filterProducts(category) {
+    if (category !== undefined) {
+      currentCategory = category;
+      // 更新分类标签的高亮
+      var tabs = document.querySelectorAll('.category-tab');
+      tabs.forEach(function(tab) {
+        tab.classList.remove('active');
+      });
+      event.target.classList.add('active');
+    }
+    var searchText = document.getElementById('searchInput').value.trim().toLowerCase();
+    var cards = document.querySelectorAll('.product-card');
+    cards.forEach(function(card) {
+      var cardCat = card.getAttribute('data-category');
+      var cardName = card.getAttribute('data-name').toLowerCase();
+      var show = true;
+      if (currentCategory !== '全部' && cardCat !== currentCategory) show = false;
+      if (searchText && cardName.indexOf(searchText) === -1) show = false;
+      card.style.display = show ? '' : 'none';
+    });
+  }
+
+  // 搜索框输入事件
+  document.getElementById('searchInput').addEventListener('input', function() {
+    filterProducts(currentCategory);
+  });
 </script>
 </body>
 </html>

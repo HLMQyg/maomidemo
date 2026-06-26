@@ -7,6 +7,7 @@ public class Item {
     private double price;
     private String imagePath;
     private String category;
+    private String status;   // 新增：上架/下架
 
     public Item() {}
 
@@ -22,4 +23,6 @@ public class Item {
     public void setImagePath(String imagePath) { this.imagePath = imagePath; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }
