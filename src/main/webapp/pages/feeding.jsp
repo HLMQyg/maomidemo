@@ -269,11 +269,15 @@
 </div>
 
 <script>
+    // 存储库存数据，供喂养时检查
+    window.inventoryData = [];
+
     // 加载库存
     function loadInventory() {
         fetch('<%= request.getContextPath() %>/getInventory')
             .then(res => res.json())
             .then(data => {
+                window.inventoryData = data;   // 缓存库存
                 var container = document.getElementById('inventoryList');
                 var html = '';
                 data.forEach(item => {
@@ -290,6 +294,16 @@
             });
     }
 
+    // 检查库存是否为空的通用方法
+    function checkInventoryEmpty() {
+        if (!window.inventoryData || window.inventoryData.length === 0) {
+            alert('您的储物柜中还没有商品，请先去商城购买~');
+            window.location.href = '<%= request.getContextPath() %>/pages/cart.jsp';
+            return true;
+        }
+        return false;
+    }
+
     var draggedItemId = null;
     function dragStart(e) {
         draggedItemId = e.target.closest('.inventory-item').dataset.itemid;
@@ -303,6 +317,10 @@
         if (!catCard) return;
         var catId = catCard.dataset.catid;
         if (!draggedItemId) return;
+
+        // 检查库存
+        if (checkInventoryEmpty()) return;
+
         var stateElem = document.getElementById('catState-' + catId);
         if (!stateElem) return;
         var state = stateElem.innerText.trim();
@@ -339,6 +357,10 @@
     var currentFeedCatId = null;
     function openFeedDialog(catId) {
         currentFeedCatId = catId;
+
+        // 检查库存
+        if (checkInventoryEmpty()) return;
+
         var stateElem = document.getElementById('catState-' + catId);
         if (stateElem) {
             var state = stateElem.innerText.trim();
