@@ -64,6 +64,22 @@ public class CatDAO {
         }
         return null;
     }
+    /** 根据名称获取猫咪 */
+    public Cat getCatByName(String name) {
+        String sql = "SELECT * FROM cats WHERE name=?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, name);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return mapRowToCat(rs);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 
     /**
      * 添加猫咪

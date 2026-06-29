@@ -39,10 +39,10 @@ public class UploadAvatarServlet extends HttpServlet {
         String newFileName = UUID.randomUUID().toString() + ext;
 
         // 外部目录（绝对路径）
-        String uploadPath = "D:/Java Web程序设计课程设计/maomi/touxiang/";
+        String uploadPath = getServletContext().getRealPath("/uploads/avatars");
         File uploadDir = new File(uploadPath);
         if (!uploadDir.exists()) uploadDir.mkdirs();
-        filePart.write(uploadPath + newFileName);
+        filePart.write(uploadPath + File.separator + newFileName);
 
 // 数据库中只存文件名（不存路径）
         String avatarPath = newFileName;

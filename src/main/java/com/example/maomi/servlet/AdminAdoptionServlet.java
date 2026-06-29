@@ -3,6 +3,7 @@ package com.example.maomi.servlet;
 import com.example.maomi.dao.AdminDAO;
 import com.example.maomi.dao.AdoptionDAO;
 import com.example.maomi.model.Adoption;
+import com.example.maomi.model.Cat;
 import com.example.maomi.utils.JsonUtil;
 
 import javax.servlet.annotation.WebServlet;
@@ -50,11 +51,9 @@ public class AdminAdoptionServlet extends HttpServlet {
                 Adoption ad = adoptionDAO.getById(id);
                 if (ad != null) {
                     com.example.maomi.dao.CatDAO catDAO = new com.example.maomi.dao.CatDAO();
-                    for (com.example.maomi.model.Cat cat : catDAO.getAllCats()) {
-                        if (cat.getName().equals(ad.getCatName())) {
-                            catDAO.updateCatState(cat.getId(), "已领养");
-                            break;
-                        }
+                    com.example.maomi.model.Cat cat = catDAO.getCatByName(ad.getCatName());
+                    if (cat != null) {
+                        catDAO.updateCatState(cat.getId(), "已领养");
                     }
                 }
             }

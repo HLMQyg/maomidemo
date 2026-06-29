@@ -352,7 +352,7 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                    <tr><th>ID</th><th>猫咪ID</th><th>用户</th><th>内容</th><th>时间</th><th>操作</th></tr>
+                    <tr><th>ID</th><th>帖子ID</th><th>用户</th><th>内容</th><th>时间</th><th>操作</th></tr>
                     </thead>
                     <tbody id="commentTbody"></tbody>
                 </table>
@@ -814,9 +814,9 @@
         } else {
             _comments.forEach(function(c) {
                 h += '<tr>' +
-                    '<td>' + c.id + '</td><td>' + c.catId + '</td><td>' + (c.username||'') + '</td>' +
-                    '<td style="max-width:280px;">' + (c.comment||'') + '</td>' +
-                    '<td style="font-size:12px;">' + (c.commentTime?c.commentTime.substring(0,16):'') + '</td>' +
+                    '<td>' + c.id + '</td><td>' + c.threadId + '</td><td>' + (c.userId||'') + '</td>' +
+                    '<td style="max-width:280px;">' + (c.content||'') + '</td>' +
+                    '<td style="font-size:12px;">' + (c.createdAt?c.createdAt.substring(0,16):'') + '</td>' +
                     '<td class="cell-actions"><button class="btn btn-danger btn-sm" onclick="deleteComment(' + c.id + ')">\u5220\u9664</button></td></tr>';
             });
         }
@@ -1088,7 +1088,7 @@ function showThreadDetail(id) {
                 html += '<div style="margin-bottom:12px;"><img src="' + ctx + '/' + d.imagePath + '" style="max-width:100%;max-height:300px;border-radius:8px;" onerror="this.style.display=\'none\'"></div>';
             }
             html += '</div>';
-            html += '<h4 style="color:#2c241b;font-size:15px;margin-bottom:8px;padding-top:12px;border-top:1px solid #f0ebe0;">评论 (' + (d.comments ? d.comments.length : 0) + ')</h4>';
+            html += '<h4 style="color:#2c241b;font-size:15px;margin-bottom:8px;padding-top:12px;border-top:1px solid #f0ebe0;">评论 (' + d.commentCount + ')</h4>';
             if (d.comments && d.comments.length > 0) {
                 html += renderAdminComments(d.comments);
             } else {

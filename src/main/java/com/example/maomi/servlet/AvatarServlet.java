@@ -8,9 +8,7 @@ import java.io.*;
 @WebServlet("/avatar")
 public class AvatarServlet extends HttpServlet {
     // 外部头像存储目录（与 UploadAvatarServlet 保持一致）
-    private static final String AVATAR_DIR = "D:/Java Web程序设计课程设计/maomi/touxiang/";
-
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+        protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String filename = request.getParameter("name");
         if (filename == null || filename.isEmpty()) {
@@ -22,10 +20,11 @@ public class AvatarServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
-        File file = new File(AVATAR_DIR, filename);
+        String avatarDir = getServletContext().getRealPath("/uploads/avatars");
+        File file = new File(avatarDir, filename);
         if (!file.exists() || file.isDirectory()) {
             // 如果文件不存在，可返回默认图片（同样放在外部目录）
-            file = new File(AVATAR_DIR, "default.png");
+            file = new File(avatarDir, "default.png");
             if (!file.exists()) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;

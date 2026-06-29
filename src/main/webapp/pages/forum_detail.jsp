@@ -264,7 +264,7 @@
     </div>
 
     <div class="comment-card" id="commentSection">
-        <h3>评论 (<%= comments != null ? comments.size() : 0 %>)</h3>
+        <h3>评论 (<%= thread.getCommentCount() %>)</h3>
         <% if (comments != null && !comments.isEmpty()) {
             for (ForumComment c : comments) { %>
         <div class="comment-item">
