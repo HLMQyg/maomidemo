@@ -42,3 +42,7 @@ build/
 out/
 .idea/
 
+*.pptx
+*.ppt
+~$*.pptx
+~$*.ppt

@@ -456,6 +456,15 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="threadDetailModal">
+    <div class="modal-box" style="max-width:700px;">
+        <button class="modal-close" onclick="closeThreadDetail()">&times;</button>
+        <h3>帖子详情</h3>
+        <div id="threadDetailContent" style="max-height:60vh;overflow-y:auto;font-size:14px;"></div>
+    </div>
+</div>
+
+
 <div class="modal-overlay" id="catModal">
     <div class="modal-box">
         <button class="modal-close" onclick="closeCatForm()">&times;</button>
@@ -845,6 +854,7 @@
                 '<td>'+t.likeCount+'/'+t.commentCount+'/'+t.viewCount+'</td>'+
                 '<td style="font-size:12px;">'+(t.createdAt?t.createdAt.substring(0,10):'')+'</td>'+
                 '<td class="cell-actions">'+
+                '<button class="btn btn-sm btn-outline" onclick="showThreadDetail('+t.id+')" style="margin-right:4px;">查看</button>'+
                 '<button class="btn btn-sm '+(t.isPinned==1?'btn-outline':'btn-primary')+'" onclick="togglePin('+t.id+','+(t.isPinned==1?0:1)+')">'+(t.isPinned==1?'取消置顶':'置顶')+'</button>'+
                 '<button class="btn btn-sm '+(t.isHidden==1?'btn-primary':'btn-outline')+'" onclick="toggleHide('+t.id+','+(t.isHidden==1?0:1)+')">'+(t.isHidden==1?'上架':'下架')+'</button>'+
                 '<button class="btn btn-sm btn-danger" onclick="deleteForumThread('+t.id+')">删除</button>'+
@@ -1061,6 +1071,61 @@
     }
 
     loadOverview();
+
+function showThreadDetail(id) {
+    fetch(ctx + '/adminForum?type=detail&id=' + id)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var html = '';
+            html += '<div style="margin-bottom:16px;">';
+            html += '<h4 style="color:#2c241b;font-size:18px;margin-bottom:8px;">' + (d.title || '') + '</h4>';
+            html += '<div style="font-size:13px;color:#999;margin-bottom:12px;">';
+            html += '作者：' + (d.userId || '') + ' | 分类：' + (d.category || '') + ' | ' + (d.createdAt ? d.createdAt.substring(0,16) : '');
+            html += ' | 赞' + d.likeCount + ' 评' + d.commentCount + ' 阅' + d.viewCount;
+            html += '</div>';
+            html += '<div style="font-size:15px;color:#4a3f32;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;padding:12px;background:#faf7f2;border-radius:8px;">' + (d.content || '') + '</div>';
+            if (d.imagePath) {
+                html += '<div style="margin-bottom:12px;"><img src="' + ctx + '/' + d.imagePath + '" style="max-width:100%;max-height:300px;border-radius:8px;" onerror="this.style.display=\'none\'"></div>';
+            }
+            html += '</div>';
+            html += '<h4 style="color:#2c241b;font-size:15px;margin-bottom:8px;padding-top:12px;border-top:1px solid #f0ebe0;">评论 (' + (d.comments ? d.comments.length : 0) + ')</h4>';
+            if (d.comments && d.comments.length > 0) {
+                html += renderAdminComments(d.comments);
+            } else {
+                html += '<div style="color:#c4b4a0;text-align:center;padding:20px;">暂无评论</div>';
+            }
+            document.getElementById('threadDetailContent').innerHTML = html;
+            document.getElementById('threadDetailModal').classList.add('show');
+        })
+        .catch(function() { toast('加载失败', 'err'); });
+}
+
+function renderAdminComments(comments) {
+    var h = '';
+    comments.forEach(function(c) {
+        h += '<div style="padding:8px 0;border-bottom:1px solid #f5f0e8;">';
+        h += '<div style="font-weight:600;color:#b87c2c;font-size:13px;">' + (c.userId || '') + '</div>';
+        h += '<div style="font-size:14px;color:#4a3f32;line-height:1.6;">' + (c.content || '') + '</div>';
+        h += '<div style="font-size:12px;color:#c4b4a0;margin-top:2px;">' + (c.createdAt ? c.createdAt.substring(0,16) : '') + ' 赞' + (c.likeCount || 0) + '</div>';
+        if (c.replies && c.replies.length > 0) {
+            h += '<div style="margin-left:20px;margin-top:6px;padding-left:12px;border-left:2px solid #f0ebe0;">';
+            c.replies.forEach(function(r) {
+                h += '<div style="padding:6px 0;">';
+                h += '<span style="font-weight:600;color:#b87c2c;font-size:12px;">' + (r.userId || '') + '</span> ';
+                h += '<span style="font-size:13px;color:#4a3f32;">' + (r.content || '') + '</span>';
+                h += '</div>';
+            });
+            h += '</div>';
+        }
+        h += '</div>';
+    });
+    return h;
+}
+
+function closeThreadDetail() {
+    document.getElementById('threadDetailModal').classList.remove('show');
+}
+
 </script>
 </body>
 </html>

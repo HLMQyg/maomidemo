@@ -1,0 +1,28 @@
+function showThreadDetail(id) {
+    fetch(ctx + '/adminForum?type=detail&id=' + id)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            var html = '';
+            html += '<div style="margin-bottom:16px;">';
+            html += '<h4 style="color:#2c241b;font-size:18px;margin-bottom:8px;">' + (d.title || '') + '</h4>';
+            html += '<div style="font-size:13px;color:#999;margin-bottom:12px;">';
+            html += '作者：' + (d.userId || '') + ' | 分类：' + (d.category || '') + ' | ' + (d.createdAt ? d.createdAt.substring(0,16) : '');
+            html += ' | 赞' + d.likeCount + ' 评' + d.commentCount + ' 阅' + d.viewCount;
+            html += '</div>';
+            html += '<div style="font-size:15px;color:#4a3f32;line-height:1.8;white-space:pre-wrap;margin-bottom:16px;padding:12px;background:#faf7f2;border-radius:8px;">' + (d.content || '') + '</div>';
+            if (d.imagePath) {
+                html += '<div style="margin-bottom:12px;"><img src="' + ctx + '/' + d.imagePath + '" style="max-width:100%;max-height:300px;border-radius:8px;" onerror="this.style.display=\'none\'"></div>';
+            }
+            html += '</div>';
+            html += '<h4 style="color:#2c241b;font-size:15px;margin-bottom:8px;padding-top:12px;border-top:1px solid #f0ebe0;">评论 (' + (d.comments ? d.comments.length : 0) + ')</h4>';
+            if (d.comments && d.comments.length > 0) {
+                html += renderAdminComments(d.comments);
+            } else {
+                html += '<div style="color:#c4b4a0;text-align:center;padding:20px;">暂无评论</div>';
+            }
+            document.getElementById('threadDetailContent').innerHTML = html;
+            document.getElementById('threadDetailModal').classList.add('show');
+        })
+        .catch(function() { toast('加载失败', 'err'); });
+}
+
