@@ -4,7 +4,7 @@ import java.sql.*;
 public class DBUtil {
     private static final String URL = "jdbc:mysql://localhost:3306/maomi?useSSL=false&serverTimezone=UTC&characterEncoding=utf8";
     private static final String USER = "root";
-    private static final String PASSWORD = "123456";  // 改成你的密码  HHHhyg200534
+    private static final String PASSWORD = "HHHhyg200534";  // 改成你的密码  HHHhyg200534
 
     static {
         try {
